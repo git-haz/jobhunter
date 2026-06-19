@@ -273,8 +273,34 @@ def toggle_plugin(plugin_id):
     return redirect(url_for("plugins_page"))
 
 
+def seed_db():
+    from werkzeug.security import generate_password_hash
+    db = get_db()
+    users = [("haroon", "haroon123"), ("broon", "broon123"), ("croon", "croon123")]
+    for username, password in users:
+        existing = db.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
+        if not existing:
+            db.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)",
+                       (username, generate_password_hash(password)))
+    plugins_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "plugins")
+    for fname in os.listdir(plugins_dir):
+        if not fname.endswith((".yaml", ".yml")):
+            continue
+        with open(os.path.join(plugins_dir, fname), "r", encoding="utf-8") as f:
+            content = f.read()
+            config = yaml.safe_load(content)
+        existing = db.execute("SELECT id FROM plugins WHERE filename = ?", (fname,)).fetchone()
+        if not existing:
+            db.execute(
+                "INSERT INTO plugins (filename, name, platform, base_url, config_yaml, active) VALUES (?,?,?,?,?,1)",
+                (fname, config["name"], config.get("platform", "generic"), config["base_url"], content))
+    db.commit()
+    db.close()
+
+
 with app.app_context():
     init_db()
+    seed_db()
 
 
 if __name__ == "__main__":
