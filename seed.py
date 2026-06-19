@@ -10,6 +10,9 @@ PLUGINS_DIR = os.path.join(os.path.dirname(__file__), "plugins")
 def seed():
     init_db()
     db = get_db()
+    from db import DB_PATH
+    print(f"Database path: {DB_PATH}")
+    print(f"Database exists: {os.path.exists(DB_PATH)}")
 
     users = [
         ("haroon", "haroon123"),

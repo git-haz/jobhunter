@@ -31,6 +31,14 @@ def load_user(user_id):
     return None
 
 
+@app.route("/debug/users")
+def debug_users():
+    db = get_db()
+    users = db.execute("SELECT id, username, password_hash FROM users").fetchall()
+    db.close()
+    return jsonify([{"id": u["id"], "username": u["username"], "hash_prefix": u["password_hash"][:20]} for u in users])
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
