@@ -1,0 +1,7 @@
+name: WorkFlex
+platform: teamtailor
+base_url: https://careers.workflex.com
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

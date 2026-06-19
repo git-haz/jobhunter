@@ -1,0 +1,24 @@
+platform: teamtailor
+jobs_list:
+  path: /jobs
+  container: "li"
+  link_selector: "a[href*='/jobs/']"
+  fields:
+    title:
+      selector: "a"
+      attribute: "text"
+    meta:
+      selector: "span"
+      attribute: "text"
+    url:
+      selector: "a"
+      attribute: "href"
+job_detail:
+  fields:
+    title:
+      selector: "h1"
+      attribute: "text"
+    description:
+      selector: "div"
+      attribute: "text"
+      parent_class: "prose"

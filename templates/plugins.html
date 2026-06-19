@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title_extra %} — Plugins{% endblock %}
+{% block content %}
+<h2>Scraper Plugins</h2>
+
+<article>
+    <h3>Upload New Plugin</h3>
+    <form method="post" action="{{ url_for('upload_plugin') }}" enctype="multipart/form-data">
+        <label>
+            YAML config file
+            <input type="file" name="file" accept=".yaml,.yml" required>
+        </label>
+        <button type="submit">Upload</button>
+    </form>
+</article>
+
+{% if plugins %}
+<table role="grid">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Platform</th>
+            <th>URL</th>
+            <th>Active</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in plugins %}
+        <tr>
+            <td>{{ p.name }}</td>
+            <td>{{ p.platform }}</td>
+            <td><a href="{{ p.base_url }}" target="_blank" rel="noopener">{{ p.base_url }}</a></td>
+            <td>{{ "Yes" if p.active else "No" }}</td>
+            <td>
+                <form method="post" action="{{ url_for('toggle_plugin', plugin_id=p.id) }}" style="display:inline">
+                    <button type="submit" class="outline small">{{ "Disable" if p.active else "Enable" }}</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No plugins registered.</p>
+{% endif %}
+{% endblock %}

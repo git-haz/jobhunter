@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block title_extra %} — Feed{% endblock %}
+{% block content %}
+<div class="feed-header">
+    <h2>Job Feed</h2>
+    <form method="post" action="{{ url_for('scrape') }}" class="scrape-form">
+        <details>
+            <summary role="button" class="outline">Scrape Jobs</summary>
+            <fieldset>
+                <label><input type="checkbox" name="plugin_ids" value="all" checked> All sources</label>
+                {% for p in plugins %}
+                <label><input type="checkbox" name="plugin_ids" value="{{ p.id }}"> {{ p.name }}</label>
+                {% endfor %}
+            </fieldset>
+            <button type="submit">Scrape Now</button>
+        </details>
+    </form>
+</div>
+
+<details class="filters-panel">
+    <summary>Filters</summary>
+    <form method="get" action="{{ url_for('feed') }}" class="filters-form">
+        <div class="grid">
+            <label>
+                Location
+                <input type="text" name="location" value="{{ filters.location }}" placeholder="e.g. Berlin, London">
+            </label>
+            <label>
+                Work Mode
+                <select name="work_mode">
+                    <option value="">Any</option>
+                    <option value="remote" {{ 'selected' if filters.work_mode == 'remote' }}>Remote</option>
+                    <option value="hybrid" {{ 'selected' if filters.work_mode == 'hybrid' }}>Hybrid</option>
+                    <option value="onsite" {{ 'selected' if filters.work_mode == 'onsite' }}>On-site</option>
+                </select>
+            </label>
+            <label>
+                Sector / Industry
+                <input type="text" name="sector" value="{{ filters.sector }}" placeholder="e.g. fintech, health">
+            </label>
+        </div>
+        <div class="grid">
+            <label>
+                Min Salary
+                <input type="number" name="min_salary" value="{{ filters.min_salary }}" placeholder="0">
+            </label>
+            <label>
+                Status
+                <select name="status">
+                    <option value="">All (except hidden)</option>
+                    <option value="new" {{ 'selected' if filters.status == 'new' }}>New</option>
+                    <option value="viewed" {{ 'selected' if filters.status == 'viewed' }}>Viewed</option>
+                    <option value="applied" {{ 'selected' if filters.status == 'applied' }}>Applied</option>
+                    <option value="hidden" {{ 'selected' if filters.status == 'hidden' }}>Hidden</option>
+                </select>
+            </label>
+            <label>
+                Source
+                <select name="source">
+                    <option value="">All</option>
+                    {% for p in plugins %}
+                    <option value="{{ p.id }}" {{ 'selected' if filters.source == p.id|string }}>{{ p.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+        <button type="submit" class="outline">Apply Filters</button>
+    </form>
+</details>
+
+{% if jobs %}
+<p class="job-count">{{ jobs|length }} job{{ 's' if jobs|length != 1 }} found</p>
+<div class="job-list">
+    {% for job in jobs %}
+    <article class="job-card" data-job-id="{{ job.id }}" data-status="{{ job.user_status }}">
+        <div class="job-card-body">
+            <div class="job-logo">
+                <img src="{{ get_favicon_url(job.source_url) }}" alt="{{ job.source_name }}" width="48" height="48"
+                     onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 rx=%228%22 fill=%22%23667%22/><text x=%2224%22 y=%2232%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2220%22>{{ job.source_name[0] }}</text></svg>'">
+            </div>
+            <div class="job-info">
+                <div class="job-title-row">
+                    <h3><a href="{{ job.url }}" target="_blank" rel="noopener">{{ job.title }}</a></h3>
+                </div>
+                <div class="job-company">{{ job.source_name }}</div>
+                <div class="job-tags">
+                    {% if job.location %}
+                    <span class="tag tag-location">{{ job.location }}</span>
+                    {% endif %}
+                    {% if job.work_mode %}
+                    <span class="tag tag-workmode">{{ job.work_mode }}</span>
+                    {% endif %}
+                    {% if job.employment_type %}
+                    <span class="tag tag-type">{{ job.employment_type }}</span>
+                    {% endif %}
+                    {% if job.department %}
+                    <span class="tag tag-dept">{{ job.department }}</span>
+                    {% endif %}
+                    {% if job.seniority %}
+                    <span class="tag tag-seniority">{{ job.seniority }}</span>
+                    {% endif %}
+                    {% if job.salary_text %}
+                    <span class="tag tag-salary">{{ job.salary_text }}</span>
+                    {% endif %}
+                </div>
+                {% if job.description %}
+                <p class="job-description">{{ job.description[:250] }}{% if job.description|length > 250 %}...{% endif %}</p>
+                {% endif %}
+                <div class="job-footer">
+                    <small class="job-date">{{ job.first_seen[:10] if job.first_seen else '' }}</small>
+                    <small class="status-label status-{{ job.user_status }}">{{ job.user_status }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="job-actions">
+            <button class="outline small" onclick="setStatus({{ job.id }}, 'viewed')" title="Mark viewed">Viewed</button>
+            <button class="outline small" onclick="setStatus({{ job.id }}, 'hidden')" title="Hide">Hide</button>
+            <button class="outline small btn-apply" onclick="openApplyModal({{ job.id }})" title="Track application">Apply</button>
+        </div>
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+<p>No jobs found. Try scraping some sources or adjusting your filters.</p>
+{% endif %}
+
+<dialog id="apply-modal">
+    <article>
+        <header>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('apply-modal').close()"></button>
+            <h3>Track Application</h3>
+        </header>
+        <form id="apply-form">
+            <input type="hidden" id="modal-job-id">
+            <label>
+                Status
+                <select id="modal-status">
+                    <option value="applied">Applied</option>
+                    <option value="interviewing">Interviewing</option>
+                    <option value="offered">Offered</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+            </label>
+            <label>
+                Applied Date
+                <input type="date" id="modal-applied-date">
+            </label>
+            <label>
+                Follow-up Date
+                <input type="date" id="modal-follow-up-date">
+            </label>
+            <label>
+                Notes
+                <textarea id="modal-notes" rows="3"></textarea>
+            </label>
+            <button type="submit">Save</button>
+        </form>
+    </article>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function setStatus(jobId, status) {
+    await fetch(`/job/${jobId}/status`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({status})
+    });
+    const card = document.querySelector(`[data-job-id="${jobId}"]`);
+    if (status === 'hidden') {
+        card.style.display = 'none';
+    } else {
+        card.dataset.status = status;
+        card.querySelector('.status-label').textContent = status;
+        card.querySelector('.status-label').className = `status-label status-${status}`;
+    }
+}
+
+function openApplyModal(jobId) {
+    document.getElementById('modal-job-id').value = jobId;
+    document.getElementById('modal-applied-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('apply-modal').showModal();
+}
+
+document.getElementById('apply-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const jobId = document.getElementById('modal-job-id').value;
+    await fetch(`/job/${jobId}/status`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            status: document.getElementById('modal-status').value,
+            applied_date: document.getElementById('modal-applied-date').value,
+            follow_up_date: document.getElementById('modal-follow-up-date').value,
+            notes: document.getElementById('modal-notes').value
+        })
+    });
+    document.getElementById('apply-modal').close();
+    location.reload();
+});
+</script>
+{% endblock %}

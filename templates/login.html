@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title_extra %} — Login{% endblock %}
+{% block content %}
+<article class="login-card">
+    <h2>Login</h2>
+    <form method="post">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" required autofocus>
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required>
+        <button type="submit">Login</button>
+    </form>
+</article>
+{% endblock %}

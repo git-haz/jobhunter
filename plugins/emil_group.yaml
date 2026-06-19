@@ -1,0 +1,7 @@
+name: Emil Group
+platform: personio
+base_url: https://emil-group-gmbh.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

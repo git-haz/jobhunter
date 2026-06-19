@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title_extra %} — Tracker{% endblock %}
+{% block content %}
+<h2>Application Tracker</h2>
+{% if jobs %}
+<div class="overflow-auto">
+    <table role="grid">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Source</th>
+                <th>Status</th>
+                <th>Applied</th>
+                <th>Follow-up</th>
+                <th>Notes</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for job in jobs %}
+            <tr>
+                <td><a href="{{ job.url }}" target="_blank" rel="noopener">{{ job.title }}</a></td>
+                <td>{{ job.source_name }}</td>
+                <td><span class="status-{{ job.status }}">{{ job.status }}</span></td>
+                <td>{{ job.applied_date or '—' }}</td>
+                <td>{{ job.follow_up_date or '—' }}</td>
+                <td>{{ job.notes or '—' }}</td>
+                <td>
+                    <button class="outline small" onclick="openEditModal({{ job.id }}, '{{ job.status }}', '{{ job.applied_date or '' }}', '{{ job.follow_up_date or '' }}', '{{ job.notes or '' }}')">Edit</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p>No tracked applications yet. Mark jobs as "Applied" from the feed to see them here.</p>
+{% endif %}
+
+<dialog id="edit-modal">
+    <article>
+        <header>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-modal').close()"></button>
+            <h3>Edit Application</h3>
+        </header>
+        <form id="edit-form">
+            <input type="hidden" id="edit-job-id">
+            <label>
+                Status
+                <select id="edit-status">
+                    <option value="applied">Applied</option>
+                    <option value="interviewing">Interviewing</option>
+                    <option value="offered">Offered</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+            </label>
+            <label>
+                Applied Date
+                <input type="date" id="edit-applied-date">
+            </label>
+            <label>
+                Follow-up Date
+                <input type="date" id="edit-follow-up-date">
+            </label>
+            <label>
+                Notes
+                <textarea id="edit-notes" rows="3"></textarea>
+            </label>
+            <button type="submit">Save</button>
+        </form>
+    </article>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openEditModal(jobId, status, appliedDate, followUp, notes) {
+    document.getElementById('edit-job-id').value = jobId;
+    document.getElementById('edit-status').value = status;
+    document.getElementById('edit-applied-date').value = appliedDate;
+    document.getElementById('edit-follow-up-date').value = followUp;
+    document.getElementById('edit-notes').value = notes;
+    document.getElementById('edit-modal').showModal();
+}
+
+document.getElementById('edit-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const jobId = document.getElementById('edit-job-id').value;
+    await fetch(`/job/${jobId}/status`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            status: document.getElementById('edit-status').value,
+            applied_date: document.getElementById('edit-applied-date').value,
+            follow_up_date: document.getElementById('edit-follow-up-date').value,
+            notes: document.getElementById('edit-notes').value
+        })
+    });
+    document.getElementById('edit-modal').close();
+    location.reload();
+});
+</script>
+{% endblock %}
