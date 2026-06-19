@@ -1,0 +1,9 @@
+name: Markel Insurance
+platform: workday
+base_url: https://markelcorp.wd5.myworkdayjobs.com
+workday_company: markelcorp
+workday_board: GlobalCareers
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

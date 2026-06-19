@@ -170,6 +170,31 @@ button.small, .outline.small {
 
 .overflow-auto { overflow-x: auto; }
 
+.version-footer {
+    text-align: center;
+    padding: 0.5rem 0;
+    opacity: 0.4;
+}
+.version-footer:hover { opacity: 0.8; }
+.version-footer a { text-decoration: none; }
+
+.version-entry h4 {
+    margin-bottom: 0.25rem;
+}
+.version-entry h4 small {
+    opacity: 0.6;
+    font-weight: normal;
+}
+.version-entry ul {
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+.scrape-form fieldset legend {
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
 @media (max-width: 768px) {
     .feed-header { flex-direction: column; }
     .filters-form .grid { grid-template-columns: 1fr; }

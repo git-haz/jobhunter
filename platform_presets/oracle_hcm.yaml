@@ -1,0 +1,29 @@
+platform: oracle_hcm
+type: api
+jobs_list:
+  method: GET
+  path: /hcmRestApi/resources/latest/recruitingCEJobRequisitions
+  params:
+    onlyData: "true"
+    expand: requisitionList.secondaryLocations,flexFieldsFacet.values
+    finder: "findReqs;siteNumber={site_number},facetsList=LOCATIONS;WORK_FLEX;TITLES;CATEGORIES;ORGANIZATIONS;POSTING_DATES;FLEX_FIELDS,limit={limit},offset={offset},lastSelectedFacet=LOCATIONS"
+  pagination:
+    type: offset
+    limit_default: 25
+    total_field: items[0].TotalJobsCount
+  response:
+    jobs_array: items[0].requisitionList
+    fields:
+      title: Title
+      external_id: Id
+      location: PrimaryLocation
+      country: PrimaryLocationCountry
+      posted: PostedDate
+job_detail:
+  method: GET
+  path_template: /hcmRestApi/resources/latest/recruitingCEJobRequisitionDetails?finder=findReqDetails;Id={external_id},siteNumber={site_number}
+  response:
+    fields:
+      title: items[0].Title
+      description: items[0].ExternalDescriptionStr
+      location: items[0].PrimaryLocation

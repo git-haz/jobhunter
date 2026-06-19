@@ -7,12 +7,36 @@ from db import get_db, init_db
 from scraper import scrape_jobs, load_all_plugins, get_favicon_url
 import yaml
 
+APP_VERSION = "0.2.0"
+VERSION_HISTORY = [
+    {"version": "0.2.0", "date": "2026-06-19", "changes": [
+        "Added Workday API scraper (Markel Insurance)",
+        "Added Oracle HCM API scraper (Chubb)",
+        "Added ottonova plugin (Personio)",
+        "Pre-scrape filters (keyword, location, work mode)",
+        "Version display with history popup",
+        "Richer job cards with full descriptions and tags",
+    ]},
+    {"version": "0.1.0", "date": "2026-06-19", "changes": [
+        "Initial release",
+        "HTML scrapers for Teamtailor and Personio",
+        "User auth with local SQLite",
+        "Job feed with filters and application tracker",
+        "YAML-based plugin system",
+    ]},
+]
+
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "jobhunter-dev-key-change-in-prod")
 
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
+
+
+@app.context_processor
+def inject_version():
+    return {"app_version": APP_VERSION, "version_history": VERSION_HISTORY}
 
 
 class User(UserMixin):
@@ -29,14 +53,6 @@ def load_user(user_id):
     if row:
         return User(row["id"], row["username"])
     return None
-
-
-@app.route("/debug/users")
-def debug_users():
-    db = get_db()
-    users = db.execute("SELECT id, username, password_hash FROM users").fetchall()
-    db.close()
-    return jsonify([{"id": u["id"], "username": u["username"], "hash_prefix": u["password_hash"][:20]} for u in users])
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -149,6 +165,12 @@ def update_job_status(job_id):
 @login_required
 def scrape():
     plugin_ids = request.form.getlist("plugin_ids")
+    scrape_filters = {
+        "keyword": request.form.get("scrape_keyword", "").strip(),
+        "location": request.form.get("scrape_location", "").strip(),
+        "work_mode": request.form.get("scrape_work_mode", "").strip(),
+    }
+
     db = get_db()
 
     if not plugin_ids or "all" in plugin_ids:
@@ -164,7 +186,7 @@ def scrape():
         try:
             config = yaml.safe_load(row["config_yaml"])
             config["base_url"] = row["base_url"]
-            jobs = scrape_jobs(config)
+            jobs = scrape_jobs(config, scrape_filters=scrape_filters)
             for job in jobs:
                 try:
                     db.execute("""
@@ -242,7 +264,7 @@ def upload_plugin():
     from werkzeug.utils import secure_filename
     filename = secure_filename(f.filename)
 
-    plugin_dir = os.path.join(os.path.dirname(__file__), "plugins")
+    plugin_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "plugins")
     filepath = os.path.join(plugin_dir, filename)
     with open(filepath, "w", encoding="utf-8") as pf:
         pf.write(content)

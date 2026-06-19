@@ -1,0 +1,7 @@
+name: ottonova
+platform: personio
+base_url: https://ottonova.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

@@ -1,0 +1,8 @@
+name: Chubb
+platform: oracle_hcm
+base_url: https://fa-ewgu-saasfaprod1.fa.ocs.oraclecloud.com
+oracle_site_number: CX_2001
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

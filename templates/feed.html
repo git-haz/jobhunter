@@ -7,10 +7,33 @@
         <details>
             <summary role="button" class="outline">Scrape Jobs</summary>
             <fieldset>
+                <legend>Sources</legend>
                 <label><input type="checkbox" name="plugin_ids" value="all" checked> All sources</label>
                 {% for p in plugins %}
                 <label><input type="checkbox" name="plugin_ids" value="{{ p.id }}"> {{ p.name }}</label>
                 {% endfor %}
+            </fieldset>
+            <fieldset>
+                <legend>Pre-scrape Filters</legend>
+                <div class="grid">
+                    <label>
+                        Keyword
+                        <input type="text" name="scrape_keyword" placeholder="e.g. product manager">
+                    </label>
+                    <label>
+                        Location
+                        <input type="text" name="scrape_location" placeholder="e.g. Munich, Berlin">
+                    </label>
+                    <label>
+                        Work Mode
+                        <select name="scrape_work_mode">
+                            <option value="">Any</option>
+                            <option value="remote">Remote</option>
+                            <option value="hybrid">Hybrid</option>
+                            <option value="onsite">On-site</option>
+                        </select>
+                    </label>
+                </div>
             </fieldset>
             <button type="submit">Scrape Now</button>
         </details>

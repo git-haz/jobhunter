@@ -1,0 +1,36 @@
+platform: workday
+type: api
+jobs_list:
+  method: POST
+  path: /wday/cxs/{company}/{board}/jobs
+  headers:
+    Content-Type: application/json
+  body:
+    appliedFacets: {}
+    limit: 20
+    offset: 0
+    searchText: ""
+  pagination:
+    type: offset
+    limit_field: limit
+    offset_field: offset
+    total_field: total
+  response:
+    jobs_array: jobPostings
+    fields:
+      title: title
+      external_id: bulletFields[0]
+      location: locationsText
+      url_path: externalPath
+      posted: postedOn
+job_detail:
+  method: GET
+  path_template: /wday/cxs/{company}/{board}{externalPath}
+  response:
+    fields:
+      title: jobPostingInfo.title
+      description: jobPostingInfo.jobDescription
+      location: jobPostingInfo.location
+      posted: jobPostingInfo.postedOn
+      employment_type: jobPostingInfo.timeType
+      job_category: jobPostingInfo.jobFamily

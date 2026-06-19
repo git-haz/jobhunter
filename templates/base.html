@@ -29,6 +29,25 @@
         {% endwith %}
         {% block content %}{% endblock %}
     </main>
+    <footer class="container-fluid version-footer">
+        <small><a href="#" onclick="document.getElementById('version-modal').showModal(); return false;">v{{ app_version }}</a></small>
+    </footer>
+    <dialog id="version-modal">
+        <article>
+            <header>
+                <button aria-label="Close" rel="prev" onclick="document.getElementById('version-modal').close()"></button>
+                <h3>Version History</h3>
+            </header>
+            {% for v in version_history %}
+            <div class="version-entry">
+                <h4>v{{ v.version }} <small>({{ v.date }})</small></h4>
+                <ul>
+                    {% for c in v.changes %}<li>{{ c }}</li>{% endfor %}
+                </ul>
+            </div>
+            {% endfor %}
+        </article>
+    </dialog>
     {% block scripts %}{% endblock %}
 </body>
 </html>
