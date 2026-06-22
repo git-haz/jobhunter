@@ -1,0 +1,7 @@
+﻿name: Aleph Alpha
+platform: personio
+base_url: https://aleph-alpha.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

@@ -1,0 +1,7 @@
+﻿name: Sono Motors
+platform: personio
+base_url: https://sonomotors.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

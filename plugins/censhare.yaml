@@ -1,0 +1,7 @@
+﻿name: censhare
+platform: personio
+base_url: https://censhare.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

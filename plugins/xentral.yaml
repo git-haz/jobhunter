@@ -1,0 +1,7 @@
+﻿name: Xentral
+platform: personio
+base_url: https://xentral.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

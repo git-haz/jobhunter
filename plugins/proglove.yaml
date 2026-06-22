@@ -1,0 +1,7 @@
+﻿name: ProGlove
+platform: personio
+base_url: https://proglove.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

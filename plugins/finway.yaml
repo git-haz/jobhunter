@@ -1,0 +1,7 @@
+﻿name: Finway
+platform: personio
+base_url: https://finway.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

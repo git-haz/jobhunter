@@ -1,0 +1,7 @@
+﻿name: Adjust
+platform: personio
+base_url: https://adjust.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

@@ -1,0 +1,7 @@
+﻿name: 4screen
+platform: personio
+base_url: https://4screen.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

@@ -1,0 +1,7 @@
+﻿name: Stylight
+platform: personio
+base_url: https://stylight.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

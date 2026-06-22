@@ -1,0 +1,7 @@
+﻿name: Retarus
+platform: personio
+base_url: https://retarus.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

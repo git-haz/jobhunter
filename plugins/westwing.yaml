@@ -1,0 +1,7 @@
+﻿name: Westwing
+platform: personio
+base_url: https://westwing.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

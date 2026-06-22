@@ -1,0 +1,7 @@
+﻿name: Interhyp
+platform: personio
+base_url: https://interhyp.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

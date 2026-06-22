@@ -7,9 +7,16 @@ from db import get_db, init_db
 from scraper import scrape_jobs, load_all_plugins, get_favicon_url
 import yaml
 
-APP_VERSION = "0.2.0"
+APP_VERSION = "0.3.0"
 VERSION_HISTORY = [
-    {"version": "0.2.0", "date": "2026-06-19", "changes": [
+    {"version": "0.3.0", "date": "2026-06-22", "changes": [
+        "Added Greenhouse API scraper (Contentful, JetBrains, FlixBus, KINEXON, Mirakl, MongoDB, Tulip, NavVis, SimScale)",
+        "Added SmartRecruiters API scraper (Scalable Capital, Check24, Sixt, Brainlab)",
+        "Added Celonis custom API scraper",
+        "60 total plugins covering Munich tech companies",
+        "6 platform presets: Teamtailor, Personio, Workday, Oracle HCM, Greenhouse, SmartRecruiters",
+    ]},
+    {"version": "0.2.0", "date": "2026-06-22", "changes": [
         "Added Workday API scraper (Markel Insurance)",
         "Added Oracle HCM API scraper (Chubb)",
         "Added ottonova plugin (Personio)",
@@ -17,7 +24,7 @@ VERSION_HISTORY = [
         "Version display with history popup",
         "Richer job cards with full descriptions and tags",
     ]},
-    {"version": "0.1.0", "date": "2026-06-19", "changes": [
+    {"version": "0.1.0", "date": "2026-06-22", "changes": [
         "Initial release",
         "HTML scrapers for Teamtailor and Personio",
         "User auth with local SQLite",

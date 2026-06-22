@@ -1,0 +1,7 @@
+﻿name: ExB Group
+platform: personio
+base_url: https://exb.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

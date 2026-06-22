@@ -1,0 +1,7 @@
+﻿name: Lilium
+platform: personio
+base_url: https://lilium.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

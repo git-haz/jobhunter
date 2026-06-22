@@ -1,0 +1,7 @@
+﻿name: tado
+platform: personio
+base_url: https://tado.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

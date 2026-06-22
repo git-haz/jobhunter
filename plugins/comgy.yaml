@@ -1,0 +1,7 @@
+﻿name: Comgy
+platform: personio
+base_url: https://comgy.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

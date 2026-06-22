@@ -1,0 +1,7 @@
+﻿name: Brainly
+platform: personio
+base_url: https://brainly.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

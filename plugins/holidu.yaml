@@ -1,0 +1,7 @@
+﻿name: Holidu
+platform: personio
+base_url: https://holidu.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

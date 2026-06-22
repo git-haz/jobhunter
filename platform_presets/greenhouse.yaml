@@ -1,0 +1,18 @@
+platform: greenhouse
+type: api
+jobs_list:
+  method: GET
+  path: /v1/boards/{board_token}/jobs
+  base_override: https://boards-api.greenhouse.io
+  params:
+    content: "true"
+  response:
+    jobs_array: jobs
+    fields:
+      title: title
+      external_id: id
+      url: absolute_url
+      location: location.name
+      department: departments[0].name
+      description: content
+      updated: updated_at

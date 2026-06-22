@@ -1,0 +1,7 @@
+﻿name: Remberg
+platform: personio
+base_url: https://remberg.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

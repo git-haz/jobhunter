@@ -1,0 +1,7 @@
+﻿name: Predium
+platform: personio
+base_url: https://predium.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

@@ -1,0 +1,7 @@
+﻿name: Magazino
+platform: personio
+base_url: https://magazino.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

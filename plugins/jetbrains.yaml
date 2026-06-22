@@ -1,0 +1,8 @@
+﻿name: JetBrains
+platform: greenhouse
+base_url: https://boards-api.greenhouse.io
+greenhouse_board_token: jetbrains
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

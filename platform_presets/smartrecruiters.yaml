@@ -1,0 +1,26 @@
+platform: smartrecruiters
+type: api
+jobs_list:
+  method: GET
+  path: /v1/companies/{company_id}/postings
+  base_override: https://api.smartrecruiters.com
+  params:
+    limit: 100
+    offset: 0
+  pagination:
+    type: offset
+    limit_field: limit
+    offset_field: offset
+    total_field: totalFound
+  response:
+    jobs_array: content
+    fields:
+      title: name
+      external_id: id
+      location: location.city
+      country: location.country
+      department: department.label
+      employment_type: typeOfEmployment.label
+      experience_level: experienceLevel.label
+      url_path: ref
+      posted: releasedDate

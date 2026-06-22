@@ -1,0 +1,7 @@
+﻿name: Applause
+platform: personio
+base_url: https://applause.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

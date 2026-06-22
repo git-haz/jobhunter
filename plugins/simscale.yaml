@@ -1,0 +1,9 @@
+﻿name: SimScale
+platform: greenhouse
+base_url: https://boards-api.greenhouse.io
+greenhouse_board_token: simscale
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []
+

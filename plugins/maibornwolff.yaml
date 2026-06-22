@@ -1,0 +1,7 @@
+﻿name: MaibornWolff
+platform: personio
+base_url: https://maibornwolff.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

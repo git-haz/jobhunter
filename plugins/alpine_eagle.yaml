@@ -1,0 +1,7 @@
+﻿name: Alpine Eagle
+platform: personio
+base_url: https://alpine-eagle.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

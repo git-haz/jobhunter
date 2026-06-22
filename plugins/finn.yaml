@@ -1,0 +1,7 @@
+﻿name: FINN
+platform: personio
+base_url: https://finn.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

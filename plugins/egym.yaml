@@ -1,0 +1,7 @@
+﻿name: EGYM
+platform: personio
+base_url: https://egym.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

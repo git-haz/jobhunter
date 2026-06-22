@@ -1,0 +1,7 @@
+﻿name: Usercentrics
+platform: personio
+base_url: https://usercentrics.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

@@ -1,0 +1,7 @@
+﻿name: ATOSS
+platform: personio
+base_url: https://atoss.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

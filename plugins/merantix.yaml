@@ -1,0 +1,7 @@
+﻿name: Merantix
+platform: personio
+base_url: https://merantix.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

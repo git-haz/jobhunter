@@ -1,0 +1,7 @@
+﻿name: IDnow
+platform: personio
+base_url: https://idnow.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

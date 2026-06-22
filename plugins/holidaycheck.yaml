@@ -1,0 +1,7 @@
+﻿name: HolidayCheck
+platform: personio
+base_url: https://holidaycheck.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

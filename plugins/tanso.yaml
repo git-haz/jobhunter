@@ -1,0 +1,7 @@
+﻿name: Tanso
+platform: personio
+base_url: https://tanso.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

@@ -1,0 +1,7 @@
+﻿name: Moss
+platform: personio
+base_url: https://moss.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

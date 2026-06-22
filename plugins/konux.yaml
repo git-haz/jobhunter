@@ -1,0 +1,7 @@
+﻿name: Konux
+platform: personio
+base_url: https://konux.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

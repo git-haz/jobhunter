@@ -1,0 +1,8 @@
+﻿name: Brainlab
+platform: smartrecruiters
+base_url: https://api.smartrecruiters.com
+smartrecruiters_company: brainlab
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

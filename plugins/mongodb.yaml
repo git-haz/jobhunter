@@ -1,0 +1,8 @@
+﻿name: MongoDB
+platform: greenhouse
+base_url: https://boards-api.greenhouse.io
+greenhouse_board_token: mongodb
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

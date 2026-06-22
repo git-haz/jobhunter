@@ -1,0 +1,7 @@
+﻿name: Celonis
+platform: celonis_api
+base_url: https://dxp-api.celonis.com
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

@@ -1,0 +1,7 @@
+﻿name: TWAICE
+platform: personio
+base_url: https://twaice.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

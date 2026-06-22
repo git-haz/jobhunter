@@ -1,0 +1,7 @@
+﻿name: Hawk AI
+platform: personio
+base_url: https://hawk.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

@@ -1,0 +1,7 @@
+﻿name: Orbem
+platform: personio
+base_url: https://orbem.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

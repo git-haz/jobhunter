@@ -1,0 +1,7 @@
+﻿name: Aily Labs
+platform: personio
+base_url: https://aily-labs.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

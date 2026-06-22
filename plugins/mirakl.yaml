@@ -1,0 +1,8 @@
+﻿name: Mirakl
+platform: greenhouse
+base_url: https://boards-api.greenhouse.io
+greenhouse_board_token: mirakl
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

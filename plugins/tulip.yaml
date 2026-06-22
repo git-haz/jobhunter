@@ -1,0 +1,8 @@
+﻿name: Tulip
+platform: greenhouse
+base_url: https://boards-api.greenhouse.io
+greenhouse_board_token: tulip
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

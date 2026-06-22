@@ -1,0 +1,7 @@
+﻿name: IONITY
+platform: personio
+base_url: https://ionity.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

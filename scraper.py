@@ -531,6 +531,149 @@ def scrape_job_detail_oracle_hcm(base_url, site_number, req_id):
 
 
 # ---------------------------------------------------------------------------
+# Greenhouse API scraper
+# ---------------------------------------------------------------------------
+
+def scrape_jobs_greenhouse(plugin_config, scrape_filters=None):
+    board_token = plugin_config.get("greenhouse_board_token", "")
+    api_url = f"https://boards-api.greenhouse.io/v1/boards/{board_token}/jobs"
+
+    params = {"content": "true"}
+    resp = requests.get(api_url, params=params, headers=HEADERS, timeout=30)
+    resp.raise_for_status()
+    data = resp.json()
+
+    jobs = []
+    for posting in data.get("jobs", []):
+        title = posting.get("title", "")
+        location = posting.get("location", {}).get("name", "")
+        departments = posting.get("departments", [])
+        department = departments[0].get("name", "") if departments else ""
+        desc_html = posting.get("content", "")
+        description = ""
+        if desc_html:
+            description = BeautifulSoup(desc_html, "html.parser").get_text(
+                separator=" ", strip=True)[:5000]
+
+        job = {
+            "external_id": str(posting.get("id", "")),
+            "title": title,
+            "url": posting.get("absolute_url", ""),
+            "location": location,
+            "department": department,
+            "work_mode": classify_text(location + " " + title + " " + description,
+                                       WORK_MODE_KEYWORDS),
+            "employment_type": classify_text(description, EMPLOYMENT_TYPE_KEYWORDS),
+            "seniority": classify_text(title, SENIORITY_KEYWORDS),
+            "salary_text": extract_salary(description),
+            "description": description,
+        }
+        jobs.append(job)
+
+    return apply_scrape_filters(jobs, scrape_filters)
+
+
+# ---------------------------------------------------------------------------
+# SmartRecruiters API scraper
+# ---------------------------------------------------------------------------
+
+def scrape_jobs_smartrecruiters(plugin_config, scrape_filters=None):
+    company_id = plugin_config.get("smartrecruiters_company", "")
+    base_api = "https://api.smartrecruiters.com"
+
+    all_jobs = []
+    offset = 0
+    limit = 100
+
+    while True:
+        params = {"limit": limit, "offset": offset}
+        resp = requests.get(
+            f"{base_api}/v1/companies/{company_id}/postings",
+            params=params, headers=HEADERS, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+
+        postings = data.get("content", [])
+        if not postings:
+            break
+
+        for p in postings:
+            title = p.get("name", "")
+            loc = p.get("location", {})
+            location = loc.get("city", "")
+            country = loc.get("country", "")
+            if country and location:
+                location = f"{location}, {country}"
+            dept = p.get("department", {})
+            department = dept.get("label", "") if isinstance(dept, dict) else ""
+            emp_type = p.get("typeOfEmployment", {})
+            employment_type = emp_type.get("label", "") if isinstance(emp_type, dict) else ""
+            exp = p.get("experienceLevel", {})
+            experience = exp.get("label", "") if isinstance(exp, dict) else ""
+
+            job_url = p.get("ref", "")
+            ext_id = p.get("id", "") or p.get("uuid", "")
+
+            job = {
+                "external_id": str(ext_id),
+                "title": title,
+                "url": job_url,
+                "location": location,
+                "department": department,
+                "work_mode": classify_text(title + " " + location, WORK_MODE_KEYWORDS),
+                "employment_type": employment_type or classify_text(title, EMPLOYMENT_TYPE_KEYWORDS),
+                "seniority": experience or classify_text(title, SENIORITY_KEYWORDS),
+                "salary_text": "",
+                "description": "",
+            }
+            all_jobs.append(job)
+
+        total = data.get("totalFound", 0)
+        offset += limit
+        if offset >= total:
+            break
+
+    return apply_scrape_filters(all_jobs, scrape_filters)
+
+
+# ---------------------------------------------------------------------------
+# Celonis custom API scraper
+# ---------------------------------------------------------------------------
+
+def scrape_jobs_celonis(plugin_config, scrape_filters=None):
+    api_url = "https://dxp-api.celonis.com/v1/jobs"
+
+    resp = requests.get(api_url, headers=HEADERS, timeout=30)
+    resp.raise_for_status()
+    data = resp.json()
+
+    jobs = []
+    for posting in data.get("jobs", []):
+        title = posting.get("title", "")
+        location = posting.get("groupedLocation", "")
+        team = posting.get("team", "")
+        seniority = posting.get("seniority", "")
+        job_function = posting.get("jobFunction", "")
+        job_id = str(posting.get("jobId", ""))
+
+        job = {
+            "external_id": job_id,
+            "title": title,
+            "url": f"https://careers.celonis.com/join-us/open-positions/{job_id}",
+            "location": location,
+            "department": team,
+            "work_mode": classify_text(location + " " + title, WORK_MODE_KEYWORDS),
+            "employment_type": posting.get("type", "") or classify_text(title, EMPLOYMENT_TYPE_KEYWORDS),
+            "seniority": seniority or classify_text(title, SENIORITY_KEYWORDS),
+            "salary_text": "",
+            "description": f"{team} - {job_function} - {seniority} - {location}",
+        }
+        jobs.append(job)
+
+    return apply_scrape_filters(jobs, scrape_filters)
+
+
+# ---------------------------------------------------------------------------
 # Main dispatcher
 # ---------------------------------------------------------------------------
 
@@ -539,6 +682,9 @@ PLATFORM_SCRAPERS = {
     "personio": scrape_jobs_html,
     "workday": scrape_jobs_workday,
     "oracle_hcm": scrape_jobs_oracle_hcm,
+    "greenhouse": scrape_jobs_greenhouse,
+    "smartrecruiters": scrape_jobs_smartrecruiters,
+    "celonis_api": scrape_jobs_celonis,
 }
 
 

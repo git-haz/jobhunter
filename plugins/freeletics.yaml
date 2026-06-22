@@ -1,0 +1,7 @@
+﻿name: Freeletics
+platform: personio
+base_url: https://freeletics.jobs.personio.de
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []
