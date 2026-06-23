@@ -12,8 +12,17 @@ from scraper import scrape_jobs, load_all_plugins, get_favicon_url
 from matcher import compute_match_score
 import yaml
 
-APP_VERSION = "0.4.0"
+APP_VERSION = "0.5.0"
 VERSION_HISTORY = [
+    {"version": "0.5.0", "date": "2026-06-23", "changes": [
+        "CV upload (PDF/DOCX/TXT) with keyword match scoring (0-10)",
+        "Domain/tools/platforms/methods/languages weighted 2x, tech skills 1x",
+        "Date range filter (last hour to 4 weeks + custom range)",
+        "Remotive, Arbeitnow, Himalayas job portal plugins (69 total)",
+        "Multi-select company filter with typeahead search",
+        "Exclusion words filter",
+        "Level and department filters",
+    ]},
     {"version": "0.4.0", "date": "2026-06-22", "changes": [
         "Auto-scrape all sources on startup (cached for all users)",
         "Enhanced filters: job title, salary, location, work type, company",
