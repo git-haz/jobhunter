@@ -1,6 +1,13 @@
 {% extends "base.html" %}
 {% block title_extra %} — Feed{% endblock %}
 {% block content %}
+{% if not has_cv %}
+<div class="cv-banner">
+    <span>Upload your CV to get match scores for every job.</span>
+    <a href="{{ url_for('cv_page') }}" role="button" class="outline small">Upload CV</a>
+</div>
+{% endif %}
+
 <div class="feed-header">
     <h2>Job Feed</h2>
     <div class="scrape-controls">
@@ -43,103 +50,117 @@
     </div>
 </div>
 
-<form method="get" action="{{ url_for('feed') }}" class="filters-form">
-    <div class="grid">
-        <label>Job Title <input type="text" name="title" value="{{ filters.title }}" placeholder="e.g. product manager"></label>
-        <label>Location <input type="text" name="location" value="{{ filters.location }}" placeholder="e.g. Munich"></label>
-        <label>Work Mode
-            <select name="work_mode">
-                <option value="">Any</option>
-                <option value="remote" {{ 'selected' if filters.work_mode == 'remote' }}>Remote</option>
-                <option value="hybrid" {{ 'selected' if filters.work_mode == 'hybrid' }}>Hybrid</option>
-                <option value="onsite" {{ 'selected' if filters.work_mode == 'onsite' }}>On-site</option>
-            </select>
-        </label>
-    </div>
-    <div class="grid">
-        <label>Company
-            <div class="multi-select" id="company-filter">
-                <div class="ms-selected" id="company-chips"></div>
-                <input type="text" id="company-search" placeholder="Type to search..." autocomplete="off">
-                <div class="ms-dropdown" id="company-dropdown"></div>
-                <input type="hidden" name="company" id="company-hidden" value="{{ filters.company }}">
-            </div>
-        </label>
-        <label>Level
-            <select name="level">
-                <option value="">Any</option>
-                <option value="junior" {{ 'selected' if filters.level == 'junior' }}>Junior / Entry Level</option>
-                <option value="mid" {{ 'selected' if filters.level == 'mid' }}>Mid-Level</option>
-                <option value="senior" {{ 'selected' if filters.level == 'senior' }}>Senior / Lead</option>
-                <option value="director" {{ 'selected' if filters.level == 'director' }}>Director / VP+</option>
-            </select>
-        </label>
-        <label>Unit / Department <input type="text" name="unit" value="{{ filters.unit }}" placeholder="e.g. Product, Engineering"></label>
-    </div>
-    <div class="grid">
-        <label>Min Salary <input type="number" name="min_salary" value="{{ filters.min_salary }}" placeholder="0"></label>
-        <label>Status
-            <select name="status">
-                <option value="">All (except hidden)</option>
-                {% for s in all_statuses %}
-                <option value="{{ s }}" {{ 'selected' if filters.status == s }}>{{ s|capitalize }}</option>
-                {% endfor %}
-            </select>
-        </label>
-        <label>Exclude <input type="text" name="exclude" value="{{ filters.exclude }}" placeholder='e.g. intern, "customer support", sales'></label>
-    </div>
-    <div class="grid">
-        <label>Posted
-            <select name="date_range" onchange="toggleCustomDate(this)">
-                <option value="">Any time</option>
-                <option value="1h" {{ 'selected' if filters.date_range == '1h' }}>Last hour</option>
-                <option value="24h" {{ 'selected' if filters.date_range == '24h' }}>Last 24 hours</option>
-                <option value="3d" {{ 'selected' if filters.date_range == '3d' }}>Last 3 days</option>
-                <option value="1w" {{ 'selected' if filters.date_range == '1w' }}>Last week</option>
-                <option value="4w" {{ 'selected' if filters.date_range == '4w' }}>Last 4 weeks</option>
-                <option value="custom" {{ 'selected' if filters.date_range == 'custom' }}>Custom range</option>
-            </select>
-        </label>
-        <label id="date-from-label" style="{{ '' if filters.date_range == 'custom' else 'display:none' }}">From <input type="date" name="date_from" value="{{ filters.date_from }}"></label>
-        <label id="date-to-label" style="{{ '' if filters.date_range == 'custom' else 'display:none' }}">To <input type="date" name="date_to" value="{{ filters.date_to }}"></label>
-        {% if has_cv %}
-        <label>Min CV Match
-            <select name="min_match">
-                <option value="">Any</option>
-                <option value="7" {{ 'selected' if filters.min_match == 7 }}>7+</option>
-                <option value="8" {{ 'selected' if filters.min_match == 8 }}>8+</option>
-                <option value="9" {{ 'selected' if filters.min_match == 9 }}>9+</option>
-                <option value="10" {{ 'selected' if filters.min_match == 10 }}>10</option>
-            </select>
-        </label>
-        {% endif %}
-    </div>
-    <div class="filter-actions">
-        <label>Sort
-            <select name="sort">
-                <option value="date_desc" {{ 'selected' if filters.sort == 'date_desc' }}>Newest first</option>
-                <option value="date_asc" {{ 'selected' if filters.sort == 'date_asc' }}>Oldest first</option>
-                <option value="company_asc" {{ 'selected' if filters.sort == 'company_asc' }}>Company A-Z</option>
-                <option value="company_desc" {{ 'selected' if filters.sort == 'company_desc' }}>Company Z-A</option>
-                <option value="location_asc" {{ 'selected' if filters.sort == 'location_asc' }}>Location A-Z</option>
-                <option value="location_desc" {{ 'selected' if filters.sort == 'location_desc' }}>Location Z-A</option>
-                {% if has_cv %}
-                <option value="match_desc" {{ 'selected' if filters.sort == 'match_desc' }}>Best CV match</option>
-                {% endif %}
-            </select>
-        </label>
-        <button type="submit" class="outline">Apply</button>
-        <a href="{{ url_for('feed') }}" class="outline" role="button">Clear</a>
-    </div>
-</form>
+<details class="filters-section" {% if filters.title or filters.location or filters.work_mode or filters.company or filters.level or filters.unit or filters.min_salary or filters.status or filters.exclude or filters.date_range or filters.min_match %}open{% endif %}>
+    <summary>Search &amp; Filters</summary>
+    <form method="get" action="{{ url_for('feed') }}" class="filters-form">
+        <div class="grid">
+            <label>Job Title <input type="text" name="title" value="{{ filters.title }}" placeholder="e.g. product manager"></label>
+            <label>Location <input type="text" name="location" value="{{ filters.location }}" placeholder="e.g. Munich"></label>
+            <label>Work Mode
+                <select name="work_mode">
+                    <option value="">Any</option>
+                    <option value="remote" {{ 'selected' if filters.work_mode == 'remote' }}>Remote</option>
+                    <option value="hybrid" {{ 'selected' if filters.work_mode == 'hybrid' }}>Hybrid</option>
+                    <option value="onsite" {{ 'selected' if filters.work_mode == 'onsite' }}>On-site</option>
+                </select>
+            </label>
+        </div>
+        <div class="grid">
+            <label>Company
+                <div class="multi-select" id="company-filter">
+                    <div class="ms-selected" id="company-chips"></div>
+                    <input type="text" id="company-search" placeholder="Type to search..." autocomplete="off">
+                    <div class="ms-dropdown" id="company-dropdown"></div>
+                    <input type="hidden" name="company" id="company-hidden" value="{{ filters.company }}">
+                </div>
+            </label>
+            <label>Level
+                <select name="level">
+                    <option value="">Any</option>
+                    <option value="junior" {{ 'selected' if filters.level == 'junior' }}>Junior / Entry Level</option>
+                    <option value="mid" {{ 'selected' if filters.level == 'mid' }}>Mid-Level</option>
+                    <option value="senior" {{ 'selected' if filters.level == 'senior' }}>Senior / Lead</option>
+                    <option value="director" {{ 'selected' if filters.level == 'director' }}>Director / VP+</option>
+                </select>
+            </label>
+            <label>Unit / Department <input type="text" name="unit" value="{{ filters.unit }}" placeholder="e.g. Product, Engineering"></label>
+        </div>
+        <div class="grid">
+            <label>Min Salary <input type="number" name="min_salary" value="{{ filters.min_salary }}" placeholder="0"></label>
+            <label>Status
+                <select name="status">
+                    <option value="">All (except hidden)</option>
+                    {% for s in all_statuses %}
+                    <option value="{{ s }}" {{ 'selected' if filters.status == s }}>{{ s|capitalize }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Exclude <input type="text" name="exclude" value="{{ filters.exclude }}" placeholder='e.g. intern, "customer support", sales'></label>
+        </div>
+        <div class="grid">
+            <label>Posted
+                <select name="date_range" onchange="toggleCustomDate(this)">
+                    <option value="">Any time</option>
+                    <option value="1h" {{ 'selected' if filters.date_range == '1h' }}>Last hour</option>
+                    <option value="24h" {{ 'selected' if filters.date_range == '24h' }}>Last 24 hours</option>
+                    <option value="3d" {{ 'selected' if filters.date_range == '3d' }}>Last 3 days</option>
+                    <option value="1w" {{ 'selected' if filters.date_range == '1w' }}>Last week</option>
+                    <option value="4w" {{ 'selected' if filters.date_range == '4w' }}>Last 4 weeks</option>
+                    <option value="custom" {{ 'selected' if filters.date_range == 'custom' }}>Custom range</option>
+                </select>
+            </label>
+            <label id="date-from-label" style="{{ '' if filters.date_range == 'custom' else 'display:none' }}">From <input type="date" name="date_from" value="{{ filters.date_from }}"></label>
+            <label id="date-to-label" style="{{ '' if filters.date_range == 'custom' else 'display:none' }}">To <input type="date" name="date_to" value="{{ filters.date_to }}"></label>
+            {% if has_cv %}
+            <label>Min CV Match
+                <select name="min_match">
+                    <option value="">Any</option>
+                    <option value="7" {{ 'selected' if filters.min_match == 7 }}>7+</option>
+                    <option value="8" {{ 'selected' if filters.min_match == 8 }}>8+</option>
+                    <option value="9" {{ 'selected' if filters.min_match == 9 }}>9+</option>
+                    <option value="10" {{ 'selected' if filters.min_match == 10 }}>10</option>
+                </select>
+            </label>
+            {% endif %}
+        </div>
+        <div class="filter-actions">
+            <label>Sort
+                <select name="sort">
+                    <option value="date_desc" {{ 'selected' if filters.sort == 'date_desc' }}>Newest first</option>
+                    <option value="date_asc" {{ 'selected' if filters.sort == 'date_asc' }}>Oldest first</option>
+                    <option value="company_asc" {{ 'selected' if filters.sort == 'company_asc' }}>Company A-Z</option>
+                    <option value="company_desc" {{ 'selected' if filters.sort == 'company_desc' }}>Company Z-A</option>
+                    <option value="location_asc" {{ 'selected' if filters.sort == 'location_asc' }}>Location A-Z</option>
+                    <option value="location_desc" {{ 'selected' if filters.sort == 'location_desc' }}>Location Z-A</option>
+                    {% if has_cv %}
+                    <option value="match_desc" {{ 'selected' if filters.sort == 'match_desc' }}>Best CV match</option>
+                    {% endif %}
+                </select>
+            </label>
+            <button type="submit" class="outline">Apply</button>
+            <a href="{{ url_for('feed') }}" class="outline" role="button">Clear</a>
+        </div>
+    </form>
+</details>
 
 <p class="job-count" id="job-count">{{ jobs|length }} job{{ 's' if jobs|length != 1 }} found</p>
-<div class="job-list" id="job-list">
-    {% for job in jobs %}
-    {% include "job_card.html" %}
+
+{% if jobs %}
+<div class="sector-tabs" id="sector-tabs">
+    <button class="tab-btn active" data-sector="all" onclick="switchTab('all')">All ({{ jobs|length }})</button>
+    {% for s in sector_names %}
+    <button class="tab-btn" data-sector="{{ s }}" onclick="switchTab('{{ s }}')">{{ s }} ({{ sectors[s]|length }})</button>
     {% endfor %}
 </div>
-{% if not jobs %}
+
+<div class="job-list" id="job-list">
+    {% for job in jobs %}
+    <div class="job-wrapper" data-sector="{{ _normalize_sector(job.department) if job.department else 'Other' }}">
+        {% include "job_card.html" %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
 <p id="empty-msg">No jobs found. Try scraping some sources or adjusting your filters.</p>
 {% endif %}
 
@@ -178,6 +199,18 @@ function toggleCustomDate(sel) {
     const show = sel.value === 'custom';
     document.getElementById('date-from-label').style.display = show ? '' : 'none';
     document.getElementById('date-to-label').style.display = show ? '' : 'none';
+}
+
+function switchTab(sector) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.tab-btn[data-sector="${sector}"]`).classList.add('active');
+    document.querySelectorAll('.job-wrapper').forEach(w => {
+        if (sector === 'all' || w.dataset.sector === sector) {
+            w.style.display = '';
+        } else {
+            w.style.display = 'none';
+        }
+    });
 }
 
 const PLUGINS = [
@@ -261,7 +294,7 @@ function buildCardHtml(j) {
     ].join('');
     const desc = j.description ? `<p class="job-description">${esc(j.description.slice(0, 250))}${j.description.length > 250 ? '...' : ''}</p>` : '';
     const date = j.first_seen ? j.first_seen.slice(0, 10) : '';
-    return `<article class="job-card" data-job-id="${j.id}" data-status="new">
+    return `<div class="job-wrapper" data-sector="Other"><article class="job-card" data-job-id="${j.id}" data-status="new">
         <div class="job-card-body">
             <div class="job-logo"><img src="${fav}" alt="${esc(j.source_name)}" width="48" height="48" onerror="this.src='${fallback}'"></div>
             <div class="job-info">
@@ -280,7 +313,7 @@ function buildCardHtml(j) {
             <button class="outline small" onclick="setStatus(${j.id}, 'hidden')" title="Hide">✕</button>
             <button class="outline small btn-apply" onclick="openModal(${j.id}, 'new', '', '', '')" title="Track">✎</button>
         </div>
-    </article>`;
+    </article></div>`;
 }
 
 function esc(s) {
@@ -326,8 +359,10 @@ function startScrape() {
             statsText.textContent = `${d.total_jobs} new jobs so far`;
         } else if (d.type === 'jobs') {
             statsText.textContent = `${d.total_jobs} new jobs so far`;
-            for (const job of d.jobs) {
-                list.insertAdjacentHTML('afterbegin', buildCardHtml(job));
+            if (list) {
+                for (const job of d.jobs) {
+                    list.insertAdjacentHTML('afterbegin', buildCardHtml(job));
+                }
             }
             updateCount(d.jobs.length);
         } else if (d.type === 'plugin_done' || d.type === 'error') {
@@ -368,7 +403,7 @@ async function setStatus(jobId, status) {
     });
     const card = document.querySelector(`[data-job-id="${jobId}"]`);
     if (status === 'hidden') {
-        card.style.display = 'none';
+        card.closest('.job-wrapper').style.display = 'none';
         updateCount(-1);
     } else {
         card.dataset.status = status;

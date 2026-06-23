@@ -3,102 +3,212 @@
 {% block content %}
 <div class="feed-header">
     <h2>Application Tracker</h2>
-    {% if jobs %}
-    <a href="{{ url_for('export_tracker') }}" role="button" class="outline">Export CSV</a>
-    {% endif %}
+    <a href="{{ url_for('export_tracker') }}" role="button" class="outline small">Export CSV</a>
 </div>
-{% if jobs %}
-<div class="overflow-auto">
-    <table role="grid">
-        <thead>
-            <tr>
-                <th></th>
-                <th>Title</th>
-                <th>Company</th>
-                <th>Location</th>
-                <th>Status</th>
-                <th>Applied</th>
-                <th>Follow-up</th>
-                <th>Notes</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for job in jobs %}
-            <tr>
-                <td><img src="{{ get_favicon_url(job.source_url) }}" width="24" height="24" style="border-radius:4px"></td>
-                <td><a href="{{ job.url }}" target="_blank" rel="noopener">{{ job.title }}</a></td>
-                <td>{{ job.source_name }}</td>
-                <td>{{ job.location or '—' }}</td>
-                <td><span class="status-{{ job.status }}">{{ job.status }}</span></td>
-                <td>{{ job.applied_date or '—' }}</td>
-                <td>{{ job.follow_up_date or '—' }}</td>
-                <td class="notes-cell" title="{{ job.notes or '' }}">{{ (job.notes or '—')[:40] }}{% if job.notes and job.notes|length > 40 %}...{% endif %}</td>
-                <td>
-                    <button class="outline small" onclick="openEditModal({{ job.id }}, '{{ job.status }}', '{{ job.notes|default('', true)|e }}', '{{ job.applied_date or '' }}', '{{ job.follow_up_date or '' }}')">Edit</button>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% else %}
-<p>No tracked jobs yet. Mark jobs from the feed as favorite, apply, or applied to see them here.</p>
-{% endif %}
 
-<dialog id="edit-modal">
-    <article>
+<div class="kanban-board" id="kanban">
+    {% for col in column_order %}
+    <div class="kanban-col" data-status="{{ col }}" draggable="true">
+        <div class="kanban-col-header" draggable="true">
+            <span class="kanban-col-title status-{{ col }}">{{ col|capitalize }}</span>
+            <span class="kanban-col-count">{{ columns[col]|length }}</span>
+            <span class="kanban-drag-handle" title="Drag to reorder">⠿</span>
+        </div>
+        <div class="kanban-cards" data-status="{{ col }}">
+            {% for job in columns[col] %}
+            <div class="kanban-card" data-job-id="{{ job.id }}" draggable="true" onclick="showDetail({{ job.id }})">
+                <div class="kc-title">{{ job.title[:40] }}{% if job.title|length > 40 %}...{% endif %}</div>
+                <div class="kc-company">{{ job.source_name }}</div>
+                <div class="kc-meta">
+                    {% if job.location %}<span>{{ job.location[:15] }}{% if job.location|length > 15 %}…{% endif %}</span>{% endif %}
+                    {% if job.work_mode %}<span class="tag tag-workmode">{{ job.work_mode }}</span>{% endif %}
+                    {% if job.salary_text %}<span class="tag tag-salary">{{ job.salary_text[:20] }}</span>{% endif %}
+                </div>
+                {% if job.match_score %}<span class="match-badge match-{{ 'high' if job.match_score >= 8 else ('mid' if job.match_score >= 5 else 'low') }}">{{ job.match_score }}/10</span>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<dialog id="detail-modal">
+    <article class="detail-article">
         <header>
-            <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-modal').close()"></button>
-            <h3>Edit Tracked Job</h3>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('detail-modal').close()"></button>
+            <h3 id="detail-title"></h3>
         </header>
-        <form id="edit-form">
-            <input type="hidden" id="edit-job-id">
-            <label>Status
-                <select id="edit-status">
-                    <option value="favorite">Favorite</option>
-                    <option value="apply">Apply (to-do)</option>
-                    <option value="applied">Applied</option>
-                    <option value="interview">Interview Stage</option>
-                    <option value="rejected">Rejected</option>
-                    <option value="withdrawn">Withdrawn</option>
-                </select>
-            </label>
-            <label>Applied Date <input type="date" id="edit-applied-date"></label>
-            <label>Follow-up Date <input type="date" id="edit-follow-up-date"></label>
-            <label>Notes <textarea id="edit-notes" rows="3"></textarea></label>
-            <button type="submit">Save</button>
-        </form>
+        <div id="detail-body">
+            <div class="detail-meta" id="detail-meta"></div>
+            <div class="detail-status-row">
+                <label>Status
+                    <select id="detail-status" onchange="changeStatus()">
+                        {% for col in column_order %}
+                        <option value="{{ col }}">{{ col|capitalize }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Notes <textarea id="detail-notes" rows="2"></textarea></label>
+            </div>
+            <div id="detail-keywords"></div>
+            <details open>
+                <summary>Full Description</summary>
+                <div id="detail-description" class="detail-desc-text"></div>
+            </details>
+        </div>
+        <footer>
+            <a id="detail-link" href="#" target="_blank" rel="noopener" role="button">Open Job Page</a>
+            <button class="outline" onclick="document.getElementById('detail-modal').close()">Close</button>
+        </footer>
     </article>
 </dialog>
 {% endblock %}
 
 {% block scripts %}
 <script>
-function openEditModal(jobId, status, notes, appliedDate, followUp) {
-    document.getElementById('edit-job-id').value = jobId;
-    document.getElementById('edit-status').value = status;
-    document.getElementById('edit-applied-date').value = appliedDate;
-    document.getElementById('edit-follow-up-date').value = followUp;
-    document.getElementById('edit-notes').value = notes;
-    document.getElementById('edit-modal').showModal();
+let currentJobId = null;
+
+async function showDetail(jobId) {
+    currentJobId = jobId;
+    const r = await fetch(`/job/${jobId}/detail`);
+    const j = await r.json();
+
+    document.getElementById('detail-title').textContent = j.title || '';
+    document.getElementById('detail-link').href = j.url || '#';
+    document.getElementById('detail-status').value = j.status || 'apply';
+    document.getElementById('detail-notes').value = j.notes || '';
+
+    let meta = `<strong>${j.source_name || ''}</strong>`;
+    if (j.location) meta += ` &middot; ${j.location}`;
+    if (j.work_mode) meta += ` &middot; <span class="tag tag-workmode">${j.work_mode}</span>`;
+    if (j.employment_type) meta += ` &middot; <span class="tag tag-type">${j.employment_type}</span>`;
+    if (j.department) meta += ` &middot; <span class="tag tag-dept">${j.department}</span>`;
+    if (j.salary_text) meta += ` &middot; <span class="tag tag-salary">${j.salary_text}</span>`;
+    if (j.match_score) {
+        const cls = j.match_score >= 8 ? 'high' : j.match_score >= 5 ? 'mid' : 'low';
+        meta += ` &middot; <span class="match-badge match-${cls}">${j.match_score}/10</span>`;
+    }
+    document.getElementById('detail-meta').innerHTML = meta;
+
+    let kwHtml = '';
+    if (j.matched_keywords && j.matched_keywords.length) {
+        kwHtml += '<div class="kw-section"><strong>Matched keywords:</strong> ';
+        kwHtml += j.matched_keywords.map(k => `<span class="kw-match">${k}</span>`).join(' ');
+        kwHtml += '</div>';
+    }
+    if (j.unmatched_keywords && j.unmatched_keywords.length) {
+        kwHtml += '<div class="kw-section"><strong>Missing from CV:</strong> ';
+        kwHtml += j.unmatched_keywords.map(k => `<span class="kw-miss">${k}</span>`).join(' ');
+        kwHtml += '</div>';
+    }
+    document.getElementById('detail-keywords').innerHTML = kwHtml;
+
+    const desc = j.description || 'No description available.';
+    document.getElementById('detail-description').textContent = desc;
+
+    document.getElementById('detail-modal').showModal();
 }
 
-document.getElementById('edit-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const jobId = document.getElementById('edit-job-id').value;
-    await fetch(`/job/${jobId}/status`, {
+async function changeStatus() {
+    if (!currentJobId) return;
+    const newStatus = document.getElementById('detail-status').value;
+    const notes = document.getElementById('detail-notes').value;
+    await fetch(`/job/${currentJobId}/status`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            status: document.getElementById('edit-status').value,
-            applied_date: document.getElementById('edit-applied-date').value,
-            follow_up_date: document.getElementById('edit-follow-up-date').value,
-            notes: document.getElementById('edit-notes').value
-        })
+        body: JSON.stringify({status: newStatus, notes})
     });
-    document.getElementById('edit-modal').close();
-    location.reload();
+    const card = document.querySelector(`.kanban-card[data-job-id="${currentJobId}"]`);
+    if (card) {
+        const targetCol = document.querySelector(`.kanban-cards[data-status="${newStatus}"]`);
+        if (targetCol) {
+            targetCol.prepend(card);
+            updateCounts();
+        }
+    }
+}
+
+function updateCounts() {
+    document.querySelectorAll('.kanban-col').forEach(col => {
+        const count = col.querySelectorAll('.kanban-card').length;
+        col.querySelector('.kanban-col-count').textContent = count;
+    });
+}
+
+// Card drag & drop between columns
+let dragCard = null;
+document.addEventListener('dragstart', e => {
+    if (e.target.classList.contains('kanban-card')) {
+        dragCard = e.target;
+        e.target.style.opacity = '0.4';
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', 'card');
+        e.stopPropagation();
+    }
+});
+document.addEventListener('dragend', e => {
+    if (e.target.classList.contains('kanban-card')) {
+        e.target.style.opacity = '';
+        dragCard = null;
+    }
+});
+document.querySelectorAll('.kanban-cards').forEach(zone => {
+    zone.addEventListener('dragover', e => {
+        if (dragCard) { e.preventDefault(); zone.classList.add('drag-over'); }
+    });
+    zone.addEventListener('dragleave', e => { zone.classList.remove('drag-over'); });
+    zone.addEventListener('drop', async e => {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        if (!dragCard) return;
+        const jobId = dragCard.dataset.jobId;
+        const newStatus = zone.dataset.status;
+        zone.prepend(dragCard);
+        updateCounts();
+        await fetch(`/job/${jobId}/status`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({status: newStatus})
+        });
+    });
+});
+
+// Column reorder drag & drop
+let dragCol = null;
+document.querySelectorAll('.kanban-col-header').forEach(header => {
+    header.addEventListener('dragstart', e => {
+        dragCol = header.closest('.kanban-col');
+        dragCol.style.opacity = '0.4';
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', 'col');
+    });
+    header.addEventListener('dragend', e => {
+        if (dragCol) dragCol.style.opacity = '';
+        dragCol = null;
+        document.querySelectorAll('.kanban-col').forEach(c => c.classList.remove('col-drag-over'));
+    });
+});
+document.querySelectorAll('.kanban-col').forEach(col => {
+    col.addEventListener('dragover', e => {
+        if (dragCol && dragCol !== col) {
+            e.preventDefault();
+            col.classList.add('col-drag-over');
+        }
+    });
+    col.addEventListener('dragleave', () => col.classList.remove('col-drag-over'));
+    col.addEventListener('drop', e => {
+        if (!dragCol || dragCol === col) return;
+        e.preventDefault();
+        col.classList.remove('col-drag-over');
+        const board = document.getElementById('kanban');
+        const rect = col.getBoundingClientRect();
+        const mid = rect.left + rect.width / 2;
+        if (e.clientX < mid) {
+            board.insertBefore(dragCol, col);
+        } else {
+            board.insertBefore(dragCol, col.nextSibling);
+        }
+    });
 });
 </script>
 {% endblock %}

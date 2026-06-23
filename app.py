@@ -12,8 +12,13 @@ from scraper import scrape_jobs, load_all_plugins, get_favicon_url
 from matcher import compute_match_score
 import yaml
 
-APP_VERSION = "0.5.0"
+APP_VERSION = "0.6.0"
 VERSION_HISTORY = [
+    {"version": "0.6.0", "date": "2026-06-23", "changes": [
+        "Kanban-style tracker with draggable columns",
+        "Job detail modal with full description and matched keywords",
+        "Collapsible search/filters, sector tabs, CV banner",
+    ]},
     {"version": "0.5.0", "date": "2026-06-23", "changes": [
         "CV upload (PDF/DOCX/TXT) with keyword match scoring (0-10)",
         "Domain/tools/platforms/methods/languages weighted 2x, tech skills 1x",
@@ -102,6 +107,31 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for("login"))
+
+
+SECTOR_MAP = {
+    "engineering": ["engineering", "software", "development", "backend", "frontend", "fullstack", "devops", "infrastructure", "platform"],
+    "product": ["product", "product management"],
+    "design": ["design", "ux", "ui", "creative"],
+    "data": ["data", "analytics", "machine learning", "ai", "artificial intelligence", "business intelligence"],
+    "marketing": ["marketing", "growth", "content", "communications", "brand"],
+    "sales": ["sales", "business development", "account", "revenue", "commercial"],
+    "operations": ["operations", "supply chain", "logistics", "project management"],
+    "finance": ["finance", "accounting", "tax", "treasury", "controlling"],
+    "hr": ["human resources", "hr", "people", "talent", "recruiting"],
+    "legal & compliance": ["legal", "compliance", "regulatory", "risk"],
+    "customer": ["customer", "support", "service", "success", "client"],
+    "it": ["it", "information technology", "security", "infosec", "cybersecurity"],
+}
+
+
+def _normalize_sector(dept):
+    lower = dept.lower()
+    for sector, keywords in SECTOR_MAP.items():
+        for kw in keywords:
+            if kw in lower:
+                return sector.title()
+    return "Other"
 
 
 @app.route("/")
@@ -228,6 +258,13 @@ def feed():
 
     db.close()
 
+    sectors = {}
+    for j in jobs:
+        dept = j.get("department", "").strip()
+        sector = _normalize_sector(dept) if dept else "Other"
+        sectors.setdefault(sector, []).append(j)
+    sector_names = sorted(sectors.keys())
+
     has_cv = bool(cv_text)
     filters = {
         "title": title_q, "location": location, "work_mode": work_mode,
@@ -238,7 +275,9 @@ def feed():
         "sort": sort_by,
     }
     return render_template("feed.html", jobs=jobs, plugins=plugins,
-                           get_favicon_url=get_favicon_url, filters=filters, has_cv=has_cv)
+                           get_favicon_url=get_favicon_url, filters=filters,
+                           has_cv=has_cv, sectors=sectors, sector_names=sector_names,
+                           _normalize_sector=_normalize_sector)
 
 
 @app.route("/job/<int:job_id>/status", methods=["POST"])
@@ -452,23 +491,67 @@ def cv_page():
     return render_template("cv.html", cv=cv)
 
 
+TRACKER_COLUMNS = ["favorite", "apply", "applied", "interview", "rejected", "withdrawn"]
+
+
 @app.route("/tracker")
 @login_required
 def tracker():
     db = get_db()
-    tracked_statuses = ("favorite", "apply", "applied", "interview", "rejected", "withdrawn")
-    placeholders = ",".join("?" * len(tracked_statuses))
-    jobs = db.execute(f"""
+    placeholders = ",".join("?" * len(TRACKER_COLUMNS))
+    rows = db.execute(f"""
         SELECT j.*, p.name as source_name, p.base_url as source_url,
-               uj.status, uj.notes, uj.applied_date, uj.follow_up_date, uj.updated_at as status_updated
+               uj.status, uj.match_score, uj.notes, uj.applied_date, uj.follow_up_date,
+               uj.updated_at as status_updated
         FROM user_jobs uj
         JOIN jobs j ON uj.job_id = j.id
         JOIN plugins p ON j.plugin_id = p.id
         WHERE uj.user_id = ? AND uj.status IN ({placeholders})
         ORDER BY uj.updated_at DESC
-    """, (current_user.id, *tracked_statuses)).fetchall()
+    """, (current_user.id, *TRACKER_COLUMNS)).fetchall()
     db.close()
-    return render_template("tracker.html", jobs=jobs, get_favicon_url=get_favicon_url)
+
+    columns = {col: [] for col in TRACKER_COLUMNS}
+    for row in rows:
+        s = row["status"]
+        if s in columns:
+            columns[s].append(dict(row))
+
+    return render_template("tracker.html", columns=columns, column_order=TRACKER_COLUMNS,
+                           get_favicon_url=get_favicon_url)
+
+
+@app.route("/job/<int:job_id>/detail")
+@login_required
+def job_detail(job_id):
+    db = get_db()
+    job = db.execute("""
+        SELECT j.*, p.name as source_name, p.base_url as source_url,
+               uj.status, uj.match_score, uj.notes, uj.applied_date, uj.follow_up_date
+        FROM jobs j
+        JOIN plugins p ON j.plugin_id = p.id
+        LEFT JOIN user_jobs uj ON uj.job_id = j.id AND uj.user_id = ?
+        WHERE j.id = ?
+    """, (current_user.id, job_id)).fetchone()
+
+    cv_row = db.execute("SELECT cv_text FROM user_cv WHERE user_id = ?", (current_user.id,)).fetchone()
+    db.close()
+
+    if not job:
+        return jsonify({"error": "not found"}), 404
+
+    result = dict(job)
+    result["matched_keywords"] = []
+    if cv_row and cv_row["cv_text"] and job["description"]:
+        from matcher import extract_keywords
+        job_kw = extract_keywords(f"{job['title']} {job['description']} {job['department']}")
+        cv_kw = extract_keywords(cv_row["cv_text"])
+        matched = [w for w in job_kw.most_common(30) if w[0] in cv_kw]
+        unmatched = [w for w in job_kw.most_common(30) if w[0] not in cv_kw]
+        result["matched_keywords"] = [w[0] for w in matched[:15]]
+        result["unmatched_keywords"] = [w[0] for w in unmatched[:15]]
+
+    return jsonify(result)
 
 
 @app.route("/tracker/export")
