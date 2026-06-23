@@ -1,14 +1,21 @@
 {% extends "base.html" %}
 {% block title_extra %} — Tracker{% endblock %}
 {% block content %}
-<h2>Application Tracker</h2>
+<div class="feed-header">
+    <h2>Application Tracker</h2>
+    {% if jobs %}
+    <a href="{{ url_for('export_tracker') }}" role="button" class="outline">Export CSV</a>
+    {% endif %}
+</div>
 {% if jobs %}
 <div class="overflow-auto">
     <table role="grid">
         <thead>
             <tr>
+                <th></th>
                 <th>Title</th>
-                <th>Source</th>
+                <th>Company</th>
+                <th>Location</th>
                 <th>Status</th>
                 <th>Applied</th>
                 <th>Follow-up</th>
@@ -19,14 +26,16 @@
         <tbody>
             {% for job in jobs %}
             <tr>
+                <td><img src="{{ get_favicon_url(job.source_url) }}" width="24" height="24" style="border-radius:4px"></td>
                 <td><a href="{{ job.url }}" target="_blank" rel="noopener">{{ job.title }}</a></td>
                 <td>{{ job.source_name }}</td>
+                <td>{{ job.location or '—' }}</td>
                 <td><span class="status-{{ job.status }}">{{ job.status }}</span></td>
                 <td>{{ job.applied_date or '—' }}</td>
                 <td>{{ job.follow_up_date or '—' }}</td>
-                <td>{{ job.notes or '—' }}</td>
+                <td class="notes-cell" title="{{ job.notes or '' }}">{{ (job.notes or '—')[:40] }}{% if job.notes and job.notes|length > 40 %}...{% endif %}</td>
                 <td>
-                    <button class="outline small" onclick="openEditModal({{ job.id }}, '{{ job.status }}', '{{ job.applied_date or '' }}', '{{ job.follow_up_date or '' }}', '{{ job.notes or '' }}')">Edit</button>
+                    <button class="outline small" onclick="openEditModal({{ job.id }}, '{{ job.status }}', '{{ job.notes|default('', true)|e }}', '{{ job.applied_date or '' }}', '{{ job.follow_up_date or '' }}')">Edit</button>
                 </td>
             </tr>
             {% endfor %}
@@ -34,38 +43,30 @@
     </table>
 </div>
 {% else %}
-<p>No tracked applications yet. Mark jobs as "Applied" from the feed to see them here.</p>
+<p>No tracked jobs yet. Mark jobs from the feed as favorite, apply, or applied to see them here.</p>
 {% endif %}
 
 <dialog id="edit-modal">
     <article>
         <header>
             <button aria-label="Close" rel="prev" onclick="document.getElementById('edit-modal').close()"></button>
-            <h3>Edit Application</h3>
+            <h3>Edit Tracked Job</h3>
         </header>
         <form id="edit-form">
             <input type="hidden" id="edit-job-id">
-            <label>
-                Status
+            <label>Status
                 <select id="edit-status">
+                    <option value="favorite">Favorite</option>
+                    <option value="apply">Apply (to-do)</option>
                     <option value="applied">Applied</option>
-                    <option value="interviewing">Interviewing</option>
-                    <option value="offered">Offered</option>
+                    <option value="interview">Interview Stage</option>
                     <option value="rejected">Rejected</option>
+                    <option value="withdrawn">Withdrawn</option>
                 </select>
             </label>
-            <label>
-                Applied Date
-                <input type="date" id="edit-applied-date">
-            </label>
-            <label>
-                Follow-up Date
-                <input type="date" id="edit-follow-up-date">
-            </label>
-            <label>
-                Notes
-                <textarea id="edit-notes" rows="3"></textarea>
-            </label>
+            <label>Applied Date <input type="date" id="edit-applied-date"></label>
+            <label>Follow-up Date <input type="date" id="edit-follow-up-date"></label>
+            <label>Notes <textarea id="edit-notes" rows="3"></textarea></label>
             <button type="submit">Save</button>
         </form>
     </article>
@@ -74,7 +75,7 @@
 
 {% block scripts %}
 <script>
-function openEditModal(jobId, status, appliedDate, followUp, notes) {
+function openEditModal(jobId, status, notes, appliedDate, followUp) {
     document.getElementById('edit-job-id').value = jobId;
     document.getElementById('edit-status').value = status;
     document.getElementById('edit-applied-date').value = appliedDate;

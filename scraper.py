@@ -674,6 +674,157 @@ def scrape_jobs_celonis(plugin_config, scrape_filters=None):
 
 
 # ---------------------------------------------------------------------------
+# Remotive API scraper
+# ---------------------------------------------------------------------------
+
+def scrape_jobs_remotive(plugin_config, scrape_filters=None):
+    category = plugin_config.get("remotive_category", "")
+    params = {"limit": 200}
+    if category:
+        params["category"] = category
+
+    search = ""
+    if scrape_filters and scrape_filters.get("keyword"):
+        params["search"] = scrape_filters["keyword"]
+
+    resp = requests.get("https://remotive.com/api/remote-jobs", params=params,
+                        headers=HEADERS, timeout=30)
+    resp.raise_for_status()
+    data = resp.json()
+
+    jobs = []
+    for p in data.get("jobs", []):
+        title = p.get("title", "")
+        location = p.get("candidate_required_location", "")
+        desc_html = p.get("description", "")
+        description = BeautifulSoup(desc_html, "html.parser").get_text(
+            separator=" ", strip=True)[:5000] if desc_html else ""
+        salary = p.get("salary", "") or ""
+        tags = p.get("tags", []) or []
+
+        job = {
+            "external_id": str(p.get("id", "")),
+            "title": title,
+            "url": p.get("url", ""),
+            "location": location,
+            "department": p.get("category", ""),
+            "work_mode": "remote",
+            "employment_type": (p.get("job_type", "") or "").replace("_", "-"),
+            "seniority": classify_text(title, SENIORITY_KEYWORDS),
+            "salary_text": salary,
+            "description": description,
+        }
+        jobs.append(job)
+
+    return apply_scrape_filters(jobs, scrape_filters)
+
+
+# ---------------------------------------------------------------------------
+# Arbeitnow API scraper
+# ---------------------------------------------------------------------------
+
+def scrape_jobs_arbeitnow(plugin_config, scrape_filters=None):
+    all_jobs = []
+    max_pages = plugin_config.get("max_pages", 3)
+
+    for page in range(1, max_pages + 1):
+        resp = requests.get(f"https://www.arbeitnow.com/api/job-board-api",
+                            params={"page": page}, headers=HEADERS, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        listings = data.get("data", [])
+        if not listings:
+            break
+
+        for p in listings:
+            title = p.get("title", "")
+            is_remote = p.get("remote", False)
+            tags = p.get("tags", []) or []
+            job_types = p.get("job_types", []) or []
+            desc_html = p.get("description", "")
+            description = BeautifulSoup(desc_html, "html.parser").get_text(
+                separator=" ", strip=True)[:5000] if desc_html else ""
+
+            job = {
+                "external_id": p.get("slug", ""),
+                "title": title,
+                "url": p.get("url", ""),
+                "location": p.get("location", ""),
+                "department": ", ".join(tags[:2]) if tags else "",
+                "work_mode": "remote" if is_remote else "",
+                "employment_type": ", ".join(job_types) if job_types else "",
+                "seniority": classify_text(title, SENIORITY_KEYWORDS),
+                "salary_text": "",
+                "description": description,
+            }
+            all_jobs.append(job)
+
+    return apply_scrape_filters(all_jobs, scrape_filters)
+
+
+# ---------------------------------------------------------------------------
+# Himalayas API scraper
+# ---------------------------------------------------------------------------
+
+def scrape_jobs_himalayas(plugin_config, scrape_filters=None):
+    keyword = ""
+    if scrape_filters and scrape_filters.get("keyword"):
+        keyword = scrape_filters["keyword"]
+
+    params = {"limit": 50}
+    use_search = bool(keyword or (scrape_filters and scrape_filters.get("location")))
+
+    if use_search:
+        url = "https://himalayas.app/jobs/api/search"
+        if keyword:
+            params["query"] = keyword
+        if scrape_filters and scrape_filters.get("location"):
+            params["country"] = scrape_filters["location"]
+    else:
+        url = "https://himalayas.app/jobs/api"
+        params["offset"] = 0
+
+    resp = requests.get(url, params=params, headers=HEADERS, timeout=30)
+    resp.raise_for_status()
+    data = resp.json()
+
+    jobs = []
+    for p in data.get("jobs", []):
+        title = p.get("title", "")
+        locations = p.get("locationRestrictions", "")
+        if isinstance(locations, list):
+            locations = ", ".join(locations)
+        salary_parts = []
+        if p.get("minSalary"):
+            salary_parts.append(str(p["minSalary"]))
+        if p.get("maxSalary"):
+            salary_parts.append(str(p["maxSalary"]))
+        salary_text = " - ".join(salary_parts)
+        if salary_text and p.get("currency"):
+            salary_text += f" {p['currency']}"
+
+        categories = p.get("categories", []) or []
+        if isinstance(categories, list):
+            categories = ", ".join(categories)
+
+        job = {
+            "external_id": p.get("guid", "") or p.get("title", ""),
+            "title": title,
+            "url": p.get("applicationLink", "") or p.get("guid", ""),
+            "location": locations,
+            "department": categories,
+            "work_mode": "remote",
+            "employment_type": p.get("employmentType", "") or "",
+            "seniority": p.get("seniority", "") or classify_text(title, SENIORITY_KEYWORDS),
+            "salary_text": salary_text,
+            "description": (p.get("excerpt", "") or "")[:5000],
+        }
+        jobs.append(job)
+
+    return apply_scrape_filters(jobs, scrape_filters)
+
+
+# ---------------------------------------------------------------------------
 # Main dispatcher
 # ---------------------------------------------------------------------------
 
@@ -685,6 +836,9 @@ PLATFORM_SCRAPERS = {
     "greenhouse": scrape_jobs_greenhouse,
     "smartrecruiters": scrape_jobs_smartrecruiters,
     "celonis_api": scrape_jobs_celonis,
+    "remotive": scrape_jobs_remotive,
+    "arbeitnow": scrape_jobs_arbeitnow,
+    "himalayas": scrape_jobs_himalayas,
 }
 
 

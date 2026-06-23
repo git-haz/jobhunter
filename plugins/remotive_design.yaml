@@ -1,0 +1,8 @@
+﻿name: Remotive (Design)
+platform: remotive
+base_url: https://remotive.com
+remotive_category: design
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

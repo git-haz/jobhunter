@@ -1,0 +1,22 @@
+platform: arbeitnow
+type: api
+jobs_list:
+  method: GET
+  base_override: https://www.arbeitnow.com
+  path: /api/job-board-api
+  params:
+    page: 1
+  pagination:
+    type: page
+    page_field: page
+  response:
+    jobs_array: data
+    fields:
+      title: title
+      external_id: slug
+      url: url
+      location: location
+      remote: remote
+      tags: tags
+      job_types: job_types
+      description: description

@@ -1,0 +1,27 @@
+platform: himalayas
+type: api
+jobs_list:
+  method: GET
+  base_override: https://himalayas.app
+  path: /jobs/api
+  params:
+    limit: 50
+    offset: 0
+  search_path: /jobs/api/search
+  search_params:
+    query: "{keyword}"
+    country: "{location}"
+    limit: 50
+  response:
+    jobs_array: jobs
+    fields:
+      title: title
+      external_id: guid
+      url: applicationLink
+      location: locationRestrictions
+      department: categories
+      employment_type: employmentType
+      seniority: seniority
+      salary_min: minSalary
+      salary_max: maxSalary
+      currency: currency

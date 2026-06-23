@@ -1,0 +1,7 @@
+﻿name: Himalayas (Remote Global)
+platform: himalayas
+base_url: https://himalayas.app
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

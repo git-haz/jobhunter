@@ -1,0 +1,21 @@
+platform: remotive
+type: api
+jobs_list:
+  method: GET
+  base_override: https://remotive.com
+  path: /api/remote-jobs
+  params:
+    limit: 200
+    category: "{remotive_category}"
+    search: "{keyword}"
+  response:
+    jobs_array: jobs
+    fields:
+      title: title
+      external_id: id
+      url: url
+      location: candidate_required_location
+      department: category
+      employment_type: job_type
+      salary: salary
+      description: description

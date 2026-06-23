@@ -1,0 +1,8 @@
+﻿name: Remotive (Data)
+platform: remotive
+base_url: https://remotive.com
+remotive_category: data
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

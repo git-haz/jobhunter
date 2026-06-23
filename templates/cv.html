@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title_extra %} — CV{% endblock %}
+{% block content %}
+<h2>Your CV</h2>
+<p>Upload your CV to get match scores against job descriptions. Keywords are compared locally — no data is sent to any external service.</p>
+
+{% if cv %}
+<article>
+    <header><h4>Current CV</h4></header>
+    <p><strong>File:</strong> {{ cv.cv_filename }} &middot; <strong>Updated:</strong> {{ cv.updated_at[:16] }} &middot; <strong>Length:</strong> {{ cv.cv_text|length }} characters</p>
+    <details>
+        <summary>Preview extracted text</summary>
+        <pre class="cv-preview">{{ cv.cv_text[:3000] }}{% if cv.cv_text|length > 3000 %}...{% endif %}</pre>
+    </details>
+</article>
+{% endif %}
+
+<article>
+    <h4>{% if cv %}Replace{% else %}Add{% endif %} CV</h4>
+    <form method="post" enctype="multipart/form-data">
+        <label>Upload PDF, DOCX, or TXT
+            <input type="file" name="cv_file" accept=".pdf,.docx,.doc,.txt">
+        </label>
+        <p style="text-align:center; opacity:0.6;">— or paste your CV text below —</p>
+        <label>CV Text
+            <textarea name="cv_text" rows="10" placeholder="Paste your CV content here..."></textarea>
+        </label>
+        <button type="submit">Save CV</button>
+    </form>
+</article>
+{% endblock %}

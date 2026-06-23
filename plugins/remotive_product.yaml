@@ -1,0 +1,8 @@
+﻿name: Remotive (Product)
+platform: remotive
+base_url: https://remotive.com
+remotive_category: product
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

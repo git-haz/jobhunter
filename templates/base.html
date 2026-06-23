@@ -12,10 +12,12 @@
     <nav class="container-fluid">
         <ul>
             <li><strong>JobHunter</strong></li>
+            <li><a href="#" class="version-link" onclick="document.getElementById('version-modal').showModal(); return false;">v{{ app_version }}</a></li>
         </ul>
         <ul>
             <li><a href="{{ url_for('feed') }}">Feed</a></li>
             <li><a href="{{ url_for('tracker') }}">Tracker</a></li>
+            <li><a href="{{ url_for('cv_page') }}">CV</a></li>
             <li><a href="{{ url_for('plugins_page') }}">Plugins</a></li>
             <li><a href="{{ url_for('logout') }}">Logout ({{ current_user.username }})</a></li>
         </ul>
@@ -29,9 +31,6 @@
         {% endwith %}
         {% block content %}{% endblock %}
     </main>
-    <footer class="container-fluid version-footer">
-        <small><a href="#" onclick="document.getElementById('version-modal').showModal(); return false;">v{{ app_version }}</a></small>
-    </footer>
     <dialog id="version-modal">
         <article>
             <header>

@@ -1,0 +1,8 @@
+﻿name: Remotive (Software Dev)
+platform: remotive
+base_url: https://remotive.com
+remotive_category: software-dev
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

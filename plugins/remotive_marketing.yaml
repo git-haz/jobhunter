@@ -1,0 +1,8 @@
+﻿name: Remotive (Marketing)
+platform: remotive
+base_url: https://remotive.com
+remotive_category: marketing
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

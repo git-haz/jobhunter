@@ -1,0 +1,8 @@
+﻿name: Remotive (AI)
+platform: remotive
+base_url: https://remotive.com
+remotive_category: artificial-intelligence
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

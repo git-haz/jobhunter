@@ -55,6 +55,7 @@ def init_db():
             user_id INTEGER NOT NULL,
             job_id INTEGER NOT NULL,
             status TEXT DEFAULT 'new',
+            match_score INTEGER DEFAULT 0,
             notes TEXT DEFAULT '',
             applied_date TEXT,
             follow_up_date TEXT,
@@ -62,6 +63,14 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id),
             FOREIGN KEY (job_id) REFERENCES jobs(id),
             UNIQUE(user_id, job_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS user_cv (
+            user_id INTEGER PRIMARY KEY,
+            cv_text TEXT DEFAULT '',
+            cv_filename TEXT DEFAULT '',
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
         );
     """)
 
@@ -81,3 +90,8 @@ def _migrate(conn):
     for col, sql in migrations.items():
         if col not in columns:
             conn.execute(sql)
+
+    cursor2 = conn.execute("PRAGMA table_info(user_jobs)")
+    uj_cols = {row[1] for row in cursor2.fetchall()}
+    if "match_score" not in uj_cols:
+        conn.execute("ALTER TABLE user_jobs ADD COLUMN match_score INTEGER DEFAULT 0")

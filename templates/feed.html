@@ -3,30 +3,23 @@
 {% block content %}
 <div class="feed-header">
     <h2>Job Feed</h2>
-    <form method="post" action="{{ url_for('scrape') }}" class="scrape-form">
-        <details>
+    <div class="scrape-controls">
+        <details id="scrape-panel">
             <summary role="button" class="outline">Scrape Jobs</summary>
             <fieldset>
                 <legend>Sources</legend>
-                <label><input type="checkbox" name="plugin_ids" value="all" checked> All sources</label>
+                <label><input type="checkbox" class="scrape-src" value="all" checked> All sources</label>
                 {% for p in plugins %}
-                <label><input type="checkbox" name="plugin_ids" value="{{ p.id }}"> {{ p.name }}</label>
+                <label><input type="checkbox" class="scrape-src" value="{{ p.id }}"> {{ p.name }}</label>
                 {% endfor %}
             </fieldset>
             <fieldset>
                 <legend>Pre-scrape Filters</legend>
                 <div class="grid">
-                    <label>
-                        Keyword
-                        <input type="text" name="scrape_keyword" placeholder="e.g. product manager">
-                    </label>
-                    <label>
-                        Location
-                        <input type="text" name="scrape_location" placeholder="e.g. Munich, Berlin">
-                    </label>
-                    <label>
-                        Work Mode
-                        <select name="scrape_work_mode">
+                    <label>Keyword <input type="text" id="scrape-keyword" placeholder="e.g. product manager"></label>
+                    <label>Location <input type="text" id="scrape-location" placeholder="e.g. Munich"></label>
+                    <label>Work Mode
+                        <select id="scrape-workmode">
                             <option value="">Any</option>
                             <option value="remote">Remote</option>
                             <option value="hybrid">Hybrid</option>
@@ -35,147 +28,144 @@
                     </label>
                 </div>
             </fieldset>
-            <button type="submit">Scrape Now</button>
+            <button type="button" id="btn-scrape" onclick="startScrape()">Scrape Now</button>
         </details>
-    </form>
+    </div>
 </div>
 
-<details class="filters-panel">
-    <summary>Filters</summary>
-    <form method="get" action="{{ url_for('feed') }}" class="filters-form">
-        <div class="grid">
-            <label>
-                Location
-                <input type="text" name="location" value="{{ filters.location }}" placeholder="e.g. Berlin, London">
-            </label>
-            <label>
-                Work Mode
-                <select name="work_mode">
-                    <option value="">Any</option>
-                    <option value="remote" {{ 'selected' if filters.work_mode == 'remote' }}>Remote</option>
-                    <option value="hybrid" {{ 'selected' if filters.work_mode == 'hybrid' }}>Hybrid</option>
-                    <option value="onsite" {{ 'selected' if filters.work_mode == 'onsite' }}>On-site</option>
-                </select>
-            </label>
-            <label>
-                Sector / Industry
-                <input type="text" name="sector" value="{{ filters.sector }}" placeholder="e.g. fintech, health">
-            </label>
-        </div>
-        <div class="grid">
-            <label>
-                Min Salary
-                <input type="number" name="min_salary" value="{{ filters.min_salary }}" placeholder="0">
-            </label>
-            <label>
-                Status
-                <select name="status">
-                    <option value="">All (except hidden)</option>
-                    <option value="new" {{ 'selected' if filters.status == 'new' }}>New</option>
-                    <option value="viewed" {{ 'selected' if filters.status == 'viewed' }}>Viewed</option>
-                    <option value="applied" {{ 'selected' if filters.status == 'applied' }}>Applied</option>
-                    <option value="hidden" {{ 'selected' if filters.status == 'hidden' }}>Hidden</option>
-                </select>
-            </label>
-            <label>
-                Source
-                <select name="source">
-                    <option value="">All</option>
-                    {% for p in plugins %}
-                    <option value="{{ p.id }}" {{ 'selected' if filters.source == p.id|string }}>{{ p.name }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-        </div>
-        <button type="submit" class="outline">Apply Filters</button>
-    </form>
-</details>
+<div id="scrape-progress" class="scrape-progress" style="display:none;">
+    <div class="progress-bar-outer">
+        <div class="progress-bar-inner" id="progress-bar" style="width:0%"></div>
+    </div>
+    <div class="progress-text">
+        <span id="progress-plugin">Starting...</span>
+        <span id="progress-stats"></span>
+    </div>
+</div>
 
-{% if jobs %}
-<p class="job-count">{{ jobs|length }} job{{ 's' if jobs|length != 1 }} found</p>
-<div class="job-list">
-    {% for job in jobs %}
-    <article class="job-card" data-job-id="{{ job.id }}" data-status="{{ job.user_status }}">
-        <div class="job-card-body">
-            <div class="job-logo">
-                <img src="{{ get_favicon_url(job.source_url) }}" alt="{{ job.source_name }}" width="48" height="48"
-                     onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 rx=%228%22 fill=%22%23667%22/><text x=%2224%22 y=%2232%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2220%22>{{ job.source_name[0] }}</text></svg>'">
+<form method="get" action="{{ url_for('feed') }}" class="filters-form">
+    <div class="grid">
+        <label>Job Title <input type="text" name="title" value="{{ filters.title }}" placeholder="e.g. product manager"></label>
+        <label>Location <input type="text" name="location" value="{{ filters.location }}" placeholder="e.g. Munich"></label>
+        <label>Work Mode
+            <select name="work_mode">
+                <option value="">Any</option>
+                <option value="remote" {{ 'selected' if filters.work_mode == 'remote' }}>Remote</option>
+                <option value="hybrid" {{ 'selected' if filters.work_mode == 'hybrid' }}>Hybrid</option>
+                <option value="onsite" {{ 'selected' if filters.work_mode == 'onsite' }}>On-site</option>
+            </select>
+        </label>
+    </div>
+    <div class="grid">
+        <label>Company
+            <div class="multi-select" id="company-filter">
+                <div class="ms-selected" id="company-chips"></div>
+                <input type="text" id="company-search" placeholder="Type to search..." autocomplete="off">
+                <div class="ms-dropdown" id="company-dropdown"></div>
+                <input type="hidden" name="company" id="company-hidden" value="{{ filters.company }}">
             </div>
-            <div class="job-info">
-                <div class="job-title-row">
-                    <h3><a href="{{ job.url }}" target="_blank" rel="noopener">{{ job.title }}</a></h3>
-                </div>
-                <div class="job-company">{{ job.source_name }}</div>
-                <div class="job-tags">
-                    {% if job.location %}
-                    <span class="tag tag-location">{{ job.location }}</span>
-                    {% endif %}
-                    {% if job.work_mode %}
-                    <span class="tag tag-workmode">{{ job.work_mode }}</span>
-                    {% endif %}
-                    {% if job.employment_type %}
-                    <span class="tag tag-type">{{ job.employment_type }}</span>
-                    {% endif %}
-                    {% if job.department %}
-                    <span class="tag tag-dept">{{ job.department }}</span>
-                    {% endif %}
-                    {% if job.seniority %}
-                    <span class="tag tag-seniority">{{ job.seniority }}</span>
-                    {% endif %}
-                    {% if job.salary_text %}
-                    <span class="tag tag-salary">{{ job.salary_text }}</span>
-                    {% endif %}
-                </div>
-                {% if job.description %}
-                <p class="job-description">{{ job.description[:250] }}{% if job.description|length > 250 %}...{% endif %}</p>
+        </label>
+        <label>Level
+            <select name="level">
+                <option value="">Any</option>
+                <option value="junior" {{ 'selected' if filters.level == 'junior' }}>Junior / Entry Level</option>
+                <option value="mid" {{ 'selected' if filters.level == 'mid' }}>Mid-Level</option>
+                <option value="senior" {{ 'selected' if filters.level == 'senior' }}>Senior / Lead</option>
+                <option value="director" {{ 'selected' if filters.level == 'director' }}>Director / VP+</option>
+            </select>
+        </label>
+        <label>Unit / Department <input type="text" name="unit" value="{{ filters.unit }}" placeholder="e.g. Product, Engineering"></label>
+    </div>
+    <div class="grid">
+        <label>Min Salary <input type="number" name="min_salary" value="{{ filters.min_salary }}" placeholder="0"></label>
+        <label>Status
+            <select name="status">
+                <option value="">All (except hidden)</option>
+                {% for s in all_statuses %}
+                <option value="{{ s }}" {{ 'selected' if filters.status == s }}>{{ s|capitalize }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Exclude <input type="text" name="exclude" value="{{ filters.exclude }}" placeholder='e.g. intern, "customer support", sales'></label>
+    </div>
+    <div class="grid">
+        <label>Posted
+            <select name="date_range" onchange="toggleCustomDate(this)">
+                <option value="">Any time</option>
+                <option value="1h" {{ 'selected' if filters.date_range == '1h' }}>Last hour</option>
+                <option value="24h" {{ 'selected' if filters.date_range == '24h' }}>Last 24 hours</option>
+                <option value="3d" {{ 'selected' if filters.date_range == '3d' }}>Last 3 days</option>
+                <option value="1w" {{ 'selected' if filters.date_range == '1w' }}>Last week</option>
+                <option value="4w" {{ 'selected' if filters.date_range == '4w' }}>Last 4 weeks</option>
+                <option value="custom" {{ 'selected' if filters.date_range == 'custom' }}>Custom range</option>
+            </select>
+        </label>
+        <label id="date-from-label" style="{{ '' if filters.date_range == 'custom' else 'display:none' }}">From <input type="date" name="date_from" value="{{ filters.date_from }}"></label>
+        <label id="date-to-label" style="{{ '' if filters.date_range == 'custom' else 'display:none' }}">To <input type="date" name="date_to" value="{{ filters.date_to }}"></label>
+        {% if has_cv %}
+        <label>Min CV Match
+            <select name="min_match">
+                <option value="">Any</option>
+                <option value="7" {{ 'selected' if filters.min_match == 7 }}>7+</option>
+                <option value="8" {{ 'selected' if filters.min_match == 8 }}>8+</option>
+                <option value="9" {{ 'selected' if filters.min_match == 9 }}>9+</option>
+                <option value="10" {{ 'selected' if filters.min_match == 10 }}>10</option>
+            </select>
+        </label>
+        {% endif %}
+    </div>
+    <div class="filter-actions">
+        <label>Sort
+            <select name="sort">
+                <option value="date_desc" {{ 'selected' if filters.sort == 'date_desc' }}>Newest first</option>
+                <option value="date_asc" {{ 'selected' if filters.sort == 'date_asc' }}>Oldest first</option>
+                <option value="company_asc" {{ 'selected' if filters.sort == 'company_asc' }}>Company A-Z</option>
+                <option value="company_desc" {{ 'selected' if filters.sort == 'company_desc' }}>Company Z-A</option>
+                <option value="location_asc" {{ 'selected' if filters.sort == 'location_asc' }}>Location A-Z</option>
+                <option value="location_desc" {{ 'selected' if filters.sort == 'location_desc' }}>Location Z-A</option>
+                {% if has_cv %}
+                <option value="match_desc" {{ 'selected' if filters.sort == 'match_desc' }}>Best CV match</option>
                 {% endif %}
-                <div class="job-footer">
-                    <small class="job-date">{{ job.first_seen[:10] if job.first_seen else '' }}</small>
-                    <small class="status-label status-{{ job.user_status }}">{{ job.user_status }}</small>
-                </div>
-            </div>
-        </div>
-        <div class="job-actions">
-            <button class="outline small" onclick="setStatus({{ job.id }}, 'viewed')" title="Mark viewed">Viewed</button>
-            <button class="outline small" onclick="setStatus({{ job.id }}, 'hidden')" title="Hide">Hide</button>
-            <button class="outline small btn-apply" onclick="openApplyModal({{ job.id }})" title="Track application">Apply</button>
-        </div>
-    </article>
+            </select>
+        </label>
+        <button type="submit" class="outline">Apply</button>
+        <a href="{{ url_for('feed') }}" class="outline" role="button">Clear</a>
+    </div>
+</form>
+
+<p class="job-count" id="job-count">{{ jobs|length }} job{{ 's' if jobs|length != 1 }} found</p>
+<div class="job-list" id="job-list">
+    {% for job in jobs %}
+    {% include "job_card.html" %}
     {% endfor %}
 </div>
-{% else %}
-<p>No jobs found. Try scraping some sources or adjusting your filters.</p>
+{% if not jobs %}
+<p id="empty-msg">No jobs found. Try scraping some sources or adjusting your filters.</p>
 {% endif %}
 
-<dialog id="apply-modal">
+<dialog id="job-modal">
     <article>
         <header>
-            <button aria-label="Close" rel="prev" onclick="document.getElementById('apply-modal').close()"></button>
-            <h3>Track Application</h3>
+            <button aria-label="Close" rel="prev" onclick="document.getElementById('job-modal').close()"></button>
+            <h3>Track Job</h3>
         </header>
-        <form id="apply-form">
-            <input type="hidden" id="modal-job-id">
-            <label>
-                Status
-                <select id="modal-status">
+        <form id="job-form">
+            <input type="hidden" id="m-job-id">
+            <label>Status
+                <select id="m-status">
+                    <option value="apply">Apply (to-do)</option>
                     <option value="applied">Applied</option>
-                    <option value="interviewing">Interviewing</option>
-                    <option value="offered">Offered</option>
+                    <option value="interview">Interview Stage</option>
+                    <option value="favorite">Favorite</option>
                     <option value="rejected">Rejected</option>
+                    <option value="withdrawn">Withdrawn</option>
+                    <option value="viewed">Viewed</option>
+                    <option value="new">New (reset)</option>
                 </select>
             </label>
-            <label>
-                Applied Date
-                <input type="date" id="modal-applied-date">
-            </label>
-            <label>
-                Follow-up Date
-                <input type="date" id="modal-follow-up-date">
-            </label>
-            <label>
-                Notes
-                <textarea id="modal-notes" rows="3"></textarea>
-            </label>
+            <label>Applied Date <input type="date" id="m-applied-date"></label>
+            <label>Follow-up Date <input type="date" id="m-follow-up-date"></label>
+            <label>Notes <textarea id="m-notes" rows="3" placeholder="Optional notes..."></textarea></label>
             <button type="submit">Save</button>
         </form>
     </article>
@@ -184,6 +174,192 @@
 
 {% block scripts %}
 <script>
+function toggleCustomDate(sel) {
+    const show = sel.value === 'custom';
+    document.getElementById('date-from-label').style.display = show ? '' : 'none';
+    document.getElementById('date-to-label').style.display = show ? '' : 'none';
+}
+
+const PLUGINS = [
+    {% for p in plugins %}{ id: "{{ p.id }}", name: "{{ p.name }}" },{% endfor %}
+];
+
+(function initCompanyFilter() {
+    const hidden = document.getElementById('company-hidden');
+    const chips = document.getElementById('company-chips');
+    const input = document.getElementById('company-search');
+    const dropdown = document.getElementById('company-dropdown');
+    let selected = new Set(hidden.value ? hidden.value.split(',').filter(Boolean) : []);
+
+    function render() {
+        hidden.value = Array.from(selected).join(',');
+        chips.innerHTML = '';
+        selected.forEach(id => {
+            const p = PLUGINS.find(x => x.id === id);
+            if (!p) return;
+            const chip = document.createElement('span');
+            chip.className = 'ms-chip';
+            chip.innerHTML = `${esc(p.name)} <span class="ms-chip-x" data-id="${id}">&times;</span>`;
+            chips.appendChild(chip);
+        });
+        chips.querySelectorAll('.ms-chip-x').forEach(x => {
+            x.onclick = () => { selected.delete(x.dataset.id); render(); };
+        });
+    }
+
+    function showDropdown(filter) {
+        const q = filter.toLowerCase();
+        const matches = PLUGINS.filter(p => !selected.has(p.id) && p.name.toLowerCase().includes(q));
+        if (!matches.length) { dropdown.style.display = 'none'; return; }
+        dropdown.innerHTML = matches.map(p =>
+            `<div class="ms-option" data-id="${p.id}">${esc(p.name)}</div>`
+        ).join('');
+        dropdown.style.display = 'block';
+        dropdown.querySelectorAll('.ms-option').forEach(opt => {
+            opt.onmousedown = (e) => {
+                e.preventDefault();
+                selected.add(opt.dataset.id);
+                input.value = '';
+                dropdown.style.display = 'none';
+                render();
+            };
+        });
+    }
+
+    input.addEventListener('input', () => showDropdown(input.value));
+    input.addEventListener('focus', () => showDropdown(input.value));
+    input.addEventListener('blur', () => setTimeout(() => dropdown.style.display = 'none', 150));
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !input.value && selected.size) {
+            const last = Array.from(selected).pop();
+            selected.delete(last);
+            render();
+        }
+    });
+
+    render();
+})();
+
+function faviconUrl(baseUrl) {
+    try {
+        const domain = new URL(baseUrl).hostname;
+        return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+    } catch { return ''; }
+}
+
+function buildCardHtml(j) {
+    const fav = faviconUrl(j.source_url || '');
+    const initial = (j.source_name || '?')[0];
+    const fallback = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 rx=%228%22 fill=%22%23667%22/><text x=%2224%22 y=%2232%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2220%22>${initial}</text></svg>`;
+    const tags = [
+        j.location ? `<span class="tag tag-location">${esc(j.location)}</span>` : '',
+        j.work_mode ? `<span class="tag tag-workmode">${esc(j.work_mode)}</span>` : '',
+        j.employment_type ? `<span class="tag tag-type">${esc(j.employment_type)}</span>` : '',
+        j.department ? `<span class="tag tag-dept">${esc(j.department)}</span>` : '',
+        j.seniority ? `<span class="tag tag-seniority">${esc(j.seniority)}</span>` : '',
+        j.salary_text ? `<span class="tag tag-salary">${esc(j.salary_text)}</span>` : '',
+    ].join('');
+    const desc = j.description ? `<p class="job-description">${esc(j.description.slice(0, 250))}${j.description.length > 250 ? '...' : ''}</p>` : '';
+    const date = j.first_seen ? j.first_seen.slice(0, 10) : '';
+    return `<article class="job-card" data-job-id="${j.id}" data-status="new">
+        <div class="job-card-body">
+            <div class="job-logo"><img src="${fav}" alt="${esc(j.source_name)}" width="48" height="48" onerror="this.src='${fallback}'"></div>
+            <div class="job-info">
+                <h3><a href="${esc(j.url)}" target="_blank" rel="noopener">${esc(j.title)}</a></h3>
+                <div class="job-company">${esc(j.source_name)}</div>
+                <div class="job-tags">${tags}</div>
+                ${desc}
+                <div class="job-footer">
+                    <small class="job-date">${date}</small>
+                    <small class="status-label status-new">new</small>
+                </div>
+            </div>
+        </div>
+        <div class="job-actions">
+            <button class="outline small" onclick="setStatus(${j.id}, 'favorite')" title="Favorite">★</button>
+            <button class="outline small" onclick="setStatus(${j.id}, 'hidden')" title="Hide">✕</button>
+            <button class="outline small btn-apply" onclick="openModal(${j.id}, 'new', '', '', '')" title="Track">✎</button>
+        </div>
+    </article>`;
+}
+
+function esc(s) {
+    if (!s) return '';
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+function startScrape() {
+    const checks = document.querySelectorAll('.scrape-src:checked');
+    let ids = Array.from(checks).map(c => c.value);
+    if (ids.includes('all')) ids = ['all'];
+    const keyword = document.getElementById('scrape-keyword').value;
+    const location = document.getElementById('scrape-location').value;
+    const workmode = document.getElementById('scrape-workmode').value;
+
+    const params = new URLSearchParams({
+        plugin_ids: ids.join(','),
+        keyword, location, work_mode: workmode
+    });
+
+    const progress = document.getElementById('scrape-progress');
+    const bar = document.getElementById('progress-bar');
+    const pluginText = document.getElementById('progress-plugin');
+    const statsText = document.getElementById('progress-stats');
+    const btn = document.getElementById('btn-scrape');
+    const list = document.getElementById('job-list');
+    const emptyMsg = document.getElementById('empty-msg');
+
+    progress.style.display = 'block';
+    btn.disabled = true;
+    btn.textContent = 'Scraping...';
+    if (emptyMsg) emptyMsg.style.display = 'none';
+
+    const es = new EventSource(`/scrape/stream?${params}`);
+    es.onmessage = function(e) {
+        const d = JSON.parse(e.data);
+        if (d.type === 'progress') {
+            const pct = Math.round((d.index / d.total_plugins) * 100);
+            bar.style.width = pct + '%';
+            pluginText.textContent = `Scraping ${d.plugin} (${d.index}/${d.total_plugins})...`;
+            statsText.textContent = `${d.total_jobs} new jobs so far`;
+        } else if (d.type === 'jobs') {
+            statsText.textContent = `${d.total_jobs} new jobs so far`;
+            for (const job of d.jobs) {
+                list.insertAdjacentHTML('afterbegin', buildCardHtml(job));
+            }
+            updateCount(d.jobs.length);
+        } else if (d.type === 'plugin_done' || d.type === 'error') {
+            statsText.textContent = `${d.total_jobs} new jobs so far`;
+            if (d.type === 'error') {
+                pluginText.textContent = `Error: ${d.plugin} — ${d.error}`;
+            }
+        } else if (d.type === 'done') {
+            bar.style.width = '100%';
+            pluginText.textContent = 'Done!';
+            statsText.textContent = `${d.total_jobs} new jobs added`;
+            btn.disabled = false;
+            btn.textContent = 'Scrape Now';
+            setTimeout(() => { progress.style.display = 'none'; }, 3000);
+            es.close();
+        }
+    };
+    es.onerror = function() {
+        pluginText.textContent = 'Connection lost';
+        btn.disabled = false;
+        btn.textContent = 'Scrape Now';
+        es.close();
+    };
+}
+
+function updateCount(added) {
+    const el = document.getElementById('job-count');
+    const current = parseInt(el.textContent) || 0;
+    const total = current + added;
+    el.textContent = `${total} job${total !== 1 ? 's' : ''} found`;
+}
+
 async function setStatus(jobId, status) {
     await fetch(`/job/${jobId}/status`, {
         method: 'POST',
@@ -193,33 +369,40 @@ async function setStatus(jobId, status) {
     const card = document.querySelector(`[data-job-id="${jobId}"]`);
     if (status === 'hidden') {
         card.style.display = 'none';
+        updateCount(-1);
     } else {
         card.dataset.status = status;
         card.querySelector('.status-label').textContent = status;
         card.querySelector('.status-label').className = `status-label status-${status}`;
+        const favBtn = card.querySelector('.job-actions button');
+        if (status === 'favorite') favBtn.classList.add('active');
+        else favBtn.classList.remove('active');
     }
 }
 
-function openApplyModal(jobId) {
-    document.getElementById('modal-job-id').value = jobId;
-    document.getElementById('modal-applied-date').value = new Date().toISOString().split('T')[0];
-    document.getElementById('apply-modal').showModal();
+function openModal(jobId, status, notes, appliedDate, followUpDate) {
+    document.getElementById('m-job-id').value = jobId;
+    document.getElementById('m-status').value = (status === 'new' || status === 'viewed') ? 'apply' : status;
+    document.getElementById('m-notes').value = notes;
+    document.getElementById('m-applied-date').value = appliedDate || new Date().toISOString().split('T')[0];
+    document.getElementById('m-follow-up-date').value = followUpDate;
+    document.getElementById('job-modal').showModal();
 }
 
-document.getElementById('apply-form').addEventListener('submit', async (e) => {
+document.getElementById('job-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const jobId = document.getElementById('modal-job-id').value;
+    const jobId = document.getElementById('m-job-id').value;
     await fetch(`/job/${jobId}/status`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
-            status: document.getElementById('modal-status').value,
-            applied_date: document.getElementById('modal-applied-date').value,
-            follow_up_date: document.getElementById('modal-follow-up-date').value,
-            notes: document.getElementById('modal-notes').value
+            status: document.getElementById('m-status').value,
+            notes: document.getElementById('m-notes').value,
+            applied_date: document.getElementById('m-applied-date').value,
+            follow_up_date: document.getElementById('m-follow-up-date').value
         })
     });
-    document.getElementById('apply-modal').close();
+    document.getElementById('job-modal').close();
     location.reload();
 });
 </script>

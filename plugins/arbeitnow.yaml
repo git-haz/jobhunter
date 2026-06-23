@@ -1,0 +1,8 @@
+﻿name: Arbeitnow (Germany/EU)
+platform: arbeitnow
+base_url: https://www.arbeitnow.com
+max_pages: 3
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

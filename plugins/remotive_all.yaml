@@ -1,0 +1,8 @@
+﻿name: Remotive (All Remote)
+platform: remotive
+base_url: https://remotive.com
+remotive_category: 
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []
