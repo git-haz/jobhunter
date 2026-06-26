@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JobHunter</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="container-fluid">
+        <ul>
+            <li><strong>JobHunter</strong></li>
+            <li><a href="#" class="version-link" onclick="document.getElementById('version-modal').showModal(); return false;" id="version-display"></a></li>
+        </ul>
+        <ul>
+            <li><a href="#" onclick="showView('feed')" class="nav-link active" data-view="feed">Feed</a></li>
+            <li><a href="#" onclick="showView('tracker')" class="nav-link" data-view="tracker">Tracker</a></li>
+            <li><a href="#" onclick="showView('cv')" class="nav-link" data-view="cv">CV</a></li>
+        </ul>
+    </nav>
+
+    <div class="container seed-info" id="seed-info"></div>
+
+    <main class="container">
+        <!-- CV Banner -->
+        <div class="cv-banner" id="cv-banner" style="display:none">
+            <span>Upload your CV to get match scores for every job.</span>
+            <a href="#" onclick="showView('cv')" role="button" class="outline small">Upload CV</a>
+        </div>
+
+        <!-- FEED VIEW -->
+        <div id="view-feed">
+            <details class="filters-section" id="filters-section">
+                <summary>Search &amp; Filters</summary>
+                <div class="filters-form">
+                    <div class="grid">
+                        <label>Job Title <input type="text" id="f-title" placeholder="e.g. product manager"></label>
+                        <label>Location <input type="text" id="f-location" placeholder="e.g. Munich"></label>
+                        <label>Work Mode
+                            <select id="f-workmode">
+                                <option value="">Any</option>
+                                <option value="remote">Remote</option>
+                                <option value="hybrid">Hybrid</option>
+                                <option value="onsite">On-site</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="grid">
+                        <label>Company <input type="text" id="f-company" placeholder="e.g. Celonis, Sixt"></label>
+                        <label>Level
+                            <select id="f-level">
+                                <option value="">Any</option>
+                                <option value="junior">Junior</option>
+                                <option value="mid">Mid</option>
+                                <option value="senior">Senior / Lead</option>
+                                <option value="director">Director / VP+</option>
+                            </select>
+                        </label>
+                        <label>Department <input type="text" id="f-dept" placeholder="e.g. Product, Engineering"></label>
+                    </div>
+                    <div class="grid">
+                        <label>Status
+                            <select id="f-status">
+                                <option value="">All (except hidden)</option>
+                                <option value="new">New</option>
+                                <option value="favorite">Favorite</option>
+                                <option value="apply">Apply</option>
+                                <option value="applied">Applied</option>
+                                <option value="interview">Interview</option>
+                                <option value="rejected">Rejected</option>
+                                <option value="withdrawn">Withdrawn</option>
+                                <option value="hidden">Hidden</option>
+                            </select>
+                        </label>
+                        <label>Min CV Match
+                            <select id="f-match">
+                                <option value="0">Any</option>
+                                <option value="1">1+</option><option value="2">2+</option>
+                                <option value="3">3+</option><option value="4">4+</option>
+                                <option value="5">5+</option><option value="6">6+</option>
+                                <option value="7">7+</option><option value="8">8+</option>
+                                <option value="9">9+</option><option value="10">10</option>
+                            </select>
+                        </label>
+                        <label>Exclude <input type="text" id="f-exclude" placeholder='e.g. intern, "support"'></label>
+                    </div>
+                    <div class="filter-actions">
+                        <label>Sort
+                            <select id="f-sort">
+                                <option value="date_desc">Newest first</option>
+                                <option value="date_asc">Oldest first</option>
+                                <option value="company_asc">Company A-Z</option>
+                                <option value="match_desc">Best CV match</option>
+                            </select>
+                        </label>
+                        <button class="outline" onclick="applyFilters()">Apply</button>
+                        <button class="outline secondary" onclick="clearFilters()">Clear</button>
+                    </div>
+                </div>
+            </details>
+
+            <div class="sector-tabs" id="sector-tabs"></div>
+            <p class="job-count" id="job-count"></p>
+            <div class="job-list" id="job-list"></div>
+        </div>
+
+        <!-- TRACKER VIEW -->
+        <div id="view-tracker" style="display:none">
+            <div class="feed-header">
+                <h2>Application Tracker</h2>
+                <button class="outline small" onclick="exportCSV()">Export CSV</button>
+            </div>
+            <div class="kanban-board" id="kanban"></div>
+        </div>
+
+        <!-- CV VIEW -->
+        <div id="view-cv" style="display:none">
+            <h2>Your CV</h2>
+            <p>Paste your CV text to get match scores against job descriptions. All processing is local — nothing is sent to any server.</p>
+            <div id="cv-current"></div>
+            <article>
+                <h4>Add / Replace CV</h4>
+                <label>CV Text <textarea id="cv-input" rows="12" placeholder="Paste your CV content here..."></textarea></label>
+                <button onclick="saveCV()">Save CV</button>
+            </article>
+        </div>
+    </main>
+
+    <!-- Job Detail Modal -->
+    <dialog id="detail-modal">
+        <article class="detail-article">
+            <header>
+                <button aria-label="Close" rel="prev" onclick="document.getElementById('detail-modal').close()"></button>
+                <h3 id="detail-title"></h3>
+            </header>
+            <div id="detail-body">
+                <div class="detail-meta" id="detail-meta"></div>
+                <div class="detail-status-row">
+                    <label>Status <select id="detail-status" onchange="changeDetailStatus()"></select></label>
+                    <label>Notes <textarea id="detail-notes" rows="2" onchange="saveDetailNotes()"></textarea></label>
+                </div>
+                <div id="detail-keywords"></div>
+                <details open><summary>Full Description</summary>
+                    <div id="detail-description" class="detail-desc-text"></div>
+                </details>
+            </div>
+            <footer>
+                <a id="detail-link" href="#" target="_blank" rel="noopener" role="button">Open Job Page</a>
+                <button class="outline" onclick="document.getElementById('detail-modal').close()">Close</button>
+            </footer>
+        </article>
+    </dialog>
+
+    <!-- Version Modal -->
+    <dialog id="version-modal">
+        <article>
+            <header>
+                <button aria-label="Close" rel="prev" onclick="document.getElementById('version-modal').close()"></button>
+                <h3>Version History</h3>
+            </header>
+            <div id="version-history"></div>
+        </article>
+    </dialog>
+
+    <script src="app.js"></script>
+</body>
+</html>
