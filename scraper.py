@@ -828,6 +828,82 @@ def scrape_jobs_himalayas(plugin_config, scrape_filters=None):
 # Main dispatcher
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Kimeta scraper (heise jobs, golem jobs)
+# ---------------------------------------------------------------------------
+
+def scrape_jobs_kimeta(plugin_config, scrape_filters=None):
+    base_url = plugin_config["base_url"].rstrip("/")
+    search_queries = plugin_config.get("search_queries", [""])
+
+    if scrape_filters and scrape_filters.get("keyword"):
+        search_queries = [scrape_filters["keyword"]]
+
+    location = ""
+    if scrape_filters and scrape_filters.get("location"):
+        location = scrape_filters["location"]
+
+    all_jobs = {}
+    for q in search_queries:
+        params = {}
+        if q:
+            params["q"] = q
+        if location:
+            params["l"] = location
+
+        try:
+            resp = requests.get(base_url + "/", params=params, headers=HEADERS, timeout=15)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, "html.parser")
+
+            for a in soup.find_all("a", href=True):
+                href = a.get("href", "")
+                if "/job?id=" not in href:
+                    continue
+                text = a.get_text(strip=True)
+                if not text or len(text) < 5:
+                    continue
+                job_id = href.split("id=")[1].split("&")[0]
+                if job_id in all_jobs:
+                    continue
+
+                title = text.replace("TOP", "").strip()
+                parent = a.find_parent(["div", "li", "article"])
+                location_text = ""
+                emp_type = ""
+                company = ""
+                if parent:
+                    spans = parent.find_all(["span", "div"])
+                    texts = [s.get_text(strip=True) for s in spans if s.get_text(strip=True)]
+                    for t in texts:
+                        lower = t.lower()
+                        if any(w in lower for w in ["vollzeit", "teilzeit", "full", "part"]):
+                            emp_type = t
+                        elif any(w in lower for w in ["gmbh", "ag", "se ", "e.v.", "kg"]) and not company:
+                            company = t
+                        elif len(t) < 40 and not location_text and t != title[:len(t)]:
+                            location_text = t
+
+                full_url = base_url + href if href.startswith("/") else href
+                all_jobs[job_id] = {
+                    "external_id": job_id,
+                    "title": title,
+                    "url": full_url,
+                    "location": location_text,
+                    "department": "",
+                    "work_mode": classify_text(title + " " + location_text, WORK_MODE_KEYWORDS),
+                    "employment_type": emp_type or classify_text(title, EMPLOYMENT_TYPE_KEYWORDS),
+                    "seniority": classify_text(title, SENIORITY_KEYWORDS),
+                    "salary_text": "",
+                    "description": title,
+                }
+        except Exception:
+            continue
+
+    jobs = list(all_jobs.values())
+    return apply_scrape_filters(jobs, scrape_filters)
+
+
 PLATFORM_SCRAPERS = {
     "teamtailor": scrape_jobs_html,
     "personio": scrape_jobs_html,
@@ -839,6 +915,7 @@ PLATFORM_SCRAPERS = {
     "remotive": scrape_jobs_remotive,
     "arbeitnow": scrape_jobs_arbeitnow,
     "himalayas": scrape_jobs_himalayas,
+    "kimeta": scrape_jobs_kimeta,
 }
 
 

@@ -1,0 +1,16 @@
+name: Golem Jobs
+platform: kimeta
+base_url: https://jobs.golem.de
+search_queries:
+  - ""
+  - "product manager"
+  - "software engineer"
+  - "data scientist"
+  - "devops"
+  - "project manager"
+  - "security"
+  - "cloud"
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

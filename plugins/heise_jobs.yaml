@@ -1,0 +1,16 @@
+name: Heise Jobs
+platform: kimeta
+base_url: https://jobs.heise.de
+search_queries:
+  - ""
+  - "product manager"
+  - "software engineer"
+  - "data scientist"
+  - "devops"
+  - "project manager"
+  - "scrum master"
+  - "ux designer"
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

@@ -1,0 +1,14 @@
+platform: kimeta
+type: html_search
+jobs_list:
+  method: GET
+  path: /
+  params:
+    q: "{keyword}"
+    l: "{location}"
+  response:
+    link_selector: "a[href*='/job?id=']"
+    fields:
+      title: text
+      url: href
+      external_id: id_from_url
