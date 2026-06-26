@@ -12,8 +12,15 @@ from scraper import scrape_jobs, load_all_plugins, get_favicon_url
 from matcher import compute_match_score
 import yaml
 
-APP_VERSION = "0.6.0"
+APP_VERSION = "0.7.0"
 VERSION_HISTORY = [
+    {"version": "0.7.0", "date": "2026-06-23", "changes": [
+        "Arbeitsagentur API (German Federal Employment Agency, 10 plugins)",
+        "4 Day Week job board (EU remote)",
+        "Heise Jobs + Golem Jobs (kimeta platform)",
+        "Match score filter expanded to 1+ through 9+",
+        "82 total plugins across 13 platforms",
+    ]},
     {"version": "0.6.0", "date": "2026-06-23", "changes": [
         "Kanban-style tracker with draggable columns",
         "Job detail modal with full description and matched keywords",

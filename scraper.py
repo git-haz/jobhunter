@@ -904,6 +904,129 @@ def scrape_jobs_kimeta(plugin_config, scrape_filters=None):
     return apply_scrape_filters(jobs, scrape_filters)
 
 
+# ---------------------------------------------------------------------------
+# Arbeitsagentur API scraper (German Federal Employment Agency)
+# ---------------------------------------------------------------------------
+
+def scrape_jobs_arbeitsagentur(plugin_config, scrape_filters=None):
+    api_headers = {**HEADERS, "X-API-Key": "jobboerse-jobsuche"}
+    base = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobs"
+
+    keyword = plugin_config.get("default_keyword", "IT")
+    location = plugin_config.get("default_location", "")
+    radius = plugin_config.get("radius", 25)
+    max_pages = plugin_config.get("max_pages", 3)
+
+    if scrape_filters:
+        if scrape_filters.get("keyword"):
+            keyword = scrape_filters["keyword"]
+        if scrape_filters.get("location"):
+            location = scrape_filters["location"]
+
+    all_jobs = []
+    for page in range(1, max_pages + 1):
+        params = {"was": keyword, "size": 25, "page": page}
+        if location:
+            params["wo"] = location
+            params["umkreis"] = radius
+
+        try:
+            resp = requests.get(base, params=params, headers=api_headers, timeout=15)
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception:
+            break
+
+        listings = data.get("stellenangebote", [])
+        if not listings:
+            break
+
+        for s in listings:
+            title = s.get("titel", "")
+            ort = s.get("arbeitsort", {})
+            loc = ort.get("ort", "")
+            region = ort.get("region", "")
+            if region and loc:
+                loc = f"{loc}, {region}"
+
+            job = {
+                "external_id": s.get("refnr", ""),
+                "title": title,
+                "url": s.get("externeUrl", "") or f"https://www.arbeitsagentur.de/jobsuche/suche?id={s.get('refnr', '')}",
+                "location": loc,
+                "department": s.get("beruf", ""),
+                "work_mode": classify_text(title + " " + loc, WORK_MODE_KEYWORDS),
+                "employment_type": classify_text(title, EMPLOYMENT_TYPE_KEYWORDS),
+                "seniority": classify_text(title, SENIORITY_KEYWORDS),
+                "salary_text": "",
+                "description": f"{title} - {s.get('beruf', '')} - {s.get('arbeitgeber', '')}",
+            }
+            all_jobs.append(job)
+
+        total = data.get("maxErgebnisse", 0)
+        if page * 25 >= total:
+            break
+
+    return apply_scrape_filters(all_jobs, scrape_filters)
+
+
+# ---------------------------------------------------------------------------
+# 4dayweek scraper (HTML)
+# ---------------------------------------------------------------------------
+
+def scrape_jobs_4dayweek(plugin_config, scrape_filters=None):
+    pages = plugin_config.get("pages", ["/remote-jobs/europe"])
+    all_jobs = {}
+
+    for page_path in pages:
+        url = f"https://4dayweek.io{page_path}"
+        try:
+            resp = requests.get(url, headers=HEADERS, timeout=15)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, "html.parser")
+
+            for a in soup.find_all("a", href=True):
+                href = a.get("href", "")
+                if not href.startswith("/job/"):
+                    continue
+                text = a.get_text(separator=" ", strip=True)
+                if len(text) < 5:
+                    continue
+                if href in all_jobs:
+                    continue
+
+                parent = a.find_parent(["div", "li", "article"])
+                company = ""
+                location = ""
+                if parent:
+                    spans = parent.find_all(["span", "p"])
+                    for s in spans:
+                        t = s.get_text(strip=True)
+                        if t and t != text and len(t) < 50:
+                            if not company:
+                                company = t
+                            elif not location:
+                                location = t
+
+                all_jobs[href] = {
+                    "external_id": href.split("/job/")[-1],
+                    "title": text,
+                    "url": f"https://4dayweek.io{href}",
+                    "location": location or "Remote",
+                    "department": "",
+                    "work_mode": "remote",
+                    "employment_type": "part-time",
+                    "seniority": classify_text(text, SENIORITY_KEYWORDS),
+                    "salary_text": "",
+                    "description": f"{text} - 4-day work week",
+                }
+        except Exception:
+            continue
+
+    jobs = list(all_jobs.values())
+    return apply_scrape_filters(jobs, scrape_filters)
+
+
 PLATFORM_SCRAPERS = {
     "teamtailor": scrape_jobs_html,
     "personio": scrape_jobs_html,
@@ -916,6 +1039,8 @@ PLATFORM_SCRAPERS = {
     "arbeitnow": scrape_jobs_arbeitnow,
     "himalayas": scrape_jobs_himalayas,
     "kimeta": scrape_jobs_kimeta,
+    "arbeitsagentur": scrape_jobs_arbeitsagentur,
+    "fourday": scrape_jobs_4dayweek,
 }
 
 

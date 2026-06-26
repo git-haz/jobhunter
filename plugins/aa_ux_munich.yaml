@@ -1,0 +1,11 @@
+﻿name: Arbeitsagentur (UX Munich)
+platform: arbeitsagentur
+base_url: https://rest.arbeitsagentur.de
+default_keyword: UX designer
+default_location: München
+radius: 25
+max_pages: 2
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

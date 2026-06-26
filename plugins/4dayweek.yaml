@@ -1,0 +1,11 @@
+﻿name: 4 Day Week (EU Remote)
+platform: fourday
+base_url: https://4dayweek.io
+pages:
+  - /remote-jobs/europe
+  - /remote-jobs/software-engineering
+  - /remote-jobs/product
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

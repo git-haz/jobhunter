@@ -1,0 +1,11 @@
+﻿name: Arbeitsagentur (Data Munich)
+platform: arbeitsagentur
+base_url: https://rest.arbeitsagentur.de
+default_keyword: data scientist
+default_location: München
+radius: 25
+max_pages: 2
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []
