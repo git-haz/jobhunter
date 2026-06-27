@@ -66,6 +66,7 @@ def run_seed():
                     seen_urls.add(job["url"])
                     job["source"] = name
                     job["source_url"] = config.get("base_url", "")
+                    job["retrieved_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
                     matched.append(job)
             all_jobs.extend(matched)
             print(f"{len(jobs)} scraped, {len(matched)} matched")

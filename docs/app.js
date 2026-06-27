@@ -172,6 +172,8 @@ function applyFilters() {
     const status = document.getElementById("f-status").value;
     const minMatch = parseInt(document.getElementById("f-match").value)||0;
     const excludeTerms = parseExclude(document.getElementById("f-exclude").value);
+    const dateFrom = document.getElementById("f-date-from").value;
+    const dateTo = document.getElementById("f-date-to").value;
     const sort = document.getElementById("f-sort").value;
 
     const uj = getUserJobs();
@@ -190,6 +192,8 @@ function applyFilters() {
             const searchable = `${j.title} ${j.description||""} ${j.department||""}`.toLowerCase();
             if (excludeTerms.some(t => searchable.includes(t))) return false;
         }
+        if (dateFrom) { const d = (j.retrieved_at||j.first_seen||"").slice(0,10); if (d < dateFrom) return false; }
+        if (dateTo) { const d = (j.retrieved_at||j.first_seen||"").slice(0,10); if (d > dateTo) return false; }
         return true;
     });
 
@@ -203,7 +207,7 @@ function applyFilters() {
 }
 
 function clearFilters() {
-    ["f-title","f-location","f-company","f-dept","f-exclude"].forEach(id => document.getElementById(id).value = "");
+    ["f-title","f-location","f-company","f-dept","f-exclude","f-date-from","f-date-to"].forEach(id => document.getElementById(id).value = "");
     ["f-workmode","f-level","f-status"].forEach(id => document.getElementById(id).value = "");
     document.getElementById("f-match").value = "0";
     document.getElementById("f-sort").value = "date_desc";
@@ -253,7 +257,7 @@ function renderJobs(jobs) {
                     </div>
                     ${j.description?`<p class="job-description">${esc((j.description||"").slice(0,250))}${(j.description||"").length>250?"...":""}</p>`:""}
                     <div class="job-footer">
-                        <small class="job-date">${(j.first_seen||"").slice(0,10)}</small>
+                        <small class="job-date" title="Retrieved: ${(j.retrieved_at||"").slice(0,16).replace("T"," ")}">${(j.retrieved_at||j.first_seen||"").slice(0,10)}</small>
                         ${score?`<span class="match-badge match-${score>=8?"high":score>=5?"mid":"low"}">${score}/10</span>`:""}
                         ${j._mustFlag?`<span class="must-flag" title="Must-have match below 50%">⚠ Must-haves: ${j._mustMatched||0}/${j._mustTotal||0}</span>`:""}
                         ${(j._mustTotal && !j._mustFlag)?`<span class="must-ok" title="Must-have match">${j._mustMatched}/${j._mustTotal} musts</span>`:""}
