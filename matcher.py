@@ -1,4 +1,4 @@
-"""Keyword-based CV-to-job matching. No tokens or credits needed."""
+"""Keyword-based CV-to-job matching with must-have vs nice-to-have detection."""
 import re
 from collections import Counter
 
@@ -52,9 +52,40 @@ german english spanish bilingual multilingual
 
 ALL_BOOST = DOMAIN_BOOST | TOOL_BOOST | PLATFORM_BOOST | METHODOLOGY_BOOST | LANGUAGE_BOOST
 
+# Section headers that signal mandatory vs optional requirements
+MUST_HAVE_HEADERS = re.compile(
+    r'(?:must.?have|required|requirements|what you.?(?:ll )?need|what we.?(?:re )?looking for|'
+    r'you bring|qualifications|essential|anforderungen|voraussetzungen|'
+    r'was du mitbringst|das bringst du mit|dein profil|ihr profil|'
+    r'what you.?(?:ll )?bring|your profile|key requirements)',
+    re.IGNORECASE
+)
+
+NICE_TO_HAVE_HEADERS = re.compile(
+    r'(?:nice.?to.?have|bonus|preferred|desirable|optional|ideally|'
+    r'additional|plus|advantageous|beneficial|'
+    r'w[üu]nschenswert|von vorteil|idealerweise|zus[äa]tzlich|'
+    r'what.?s a plus|it.?s a bonus|extra points|good to have)',
+    re.IGNORECASE
+)
+
+# Inline cues within sentences
+MUST_CUES = re.compile(
+    r'(?:must have|required|essential|mandatory|necessary|critical|'
+    r'you must|we require|is required|are required|'
+    r'zwingend|erforderlich|notwendig|muss|m[üu]ssen)',
+    re.IGNORECASE
+)
+
+NICE_CUES = re.compile(
+    r'(?:nice to have|bonus|preferred|ideally|preferably|desirable|'
+    r'a plus|an advantage|not required|optional|beneficial|'
+    r'von vorteil|w[üu]nschenswert|idealerweise|gerne gesehen|nicht zwingend)',
+    re.IGNORECASE
+)
+
 
 def extract_keywords(text):
-    """Extract meaningful keywords from text, returning a Counter of normalized terms."""
     text = re.sub(r'<[^>]+>', ' ', text)
     text = re.sub(r'[^\w\s+#.]', ' ', text.lower())
     words = text.split()
@@ -67,6 +98,64 @@ def extract_keywords(text):
             continue
         keywords[w] += 1
     return keywords
+
+
+def classify_requirements(description):
+    """Split description into must-have and nice-to-have sections.
+
+    Returns a dict mapping each keyword to 'must' or 'nice'.
+    Uses section headers first, then inline cue fallback.
+    """
+    if not description:
+        return {}, {}
+
+    text = re.sub(r'<[^>]+>', '\n', description)
+    lines = text.split('\n')
+
+    must_lines = []
+    nice_lines = []
+    current = 'must'
+    section_found = False
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if NICE_TO_HAVE_HEADERS.search(stripped):
+            current = 'nice'
+            section_found = True
+            continue
+        if MUST_HAVE_HEADERS.search(stripped):
+            current = 'must'
+            section_found = True
+            continue
+        if current == 'must':
+            must_lines.append(stripped)
+        else:
+            nice_lines.append(stripped)
+
+    if section_found:
+        must_text = ' '.join(must_lines)
+        nice_text = ' '.join(nice_lines)
+        return extract_keywords(must_text), extract_keywords(nice_text)
+
+    # Fallback: classify individual lines by inline cues
+    must_lines = []
+    nice_lines = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if NICE_CUES.search(stripped):
+            nice_lines.append(stripped)
+        elif MUST_CUES.search(stripped):
+            must_lines.append(stripped)
+        else:
+            must_lines.append(stripped)
+
+    must_text = ' '.join(must_lines)
+    nice_text = ' '.join(nice_lines)
+    return extract_keywords(must_text), extract_keywords(nice_text)
 
 
 def compute_match_score(job_text, cv_text):
@@ -102,3 +191,72 @@ def compute_match_score(job_text, cv_text):
     ratio = matched / total_weight if total_weight else 0
     score = round(ratio * 10)
     return min(score, 10)
+
+
+def compute_detailed_match(job_text, cv_text, description=""):
+    """Compute match score with must-have vs nice-to-have breakdown.
+
+    Returns dict with: score, must_score, must_total, must_matched,
+    nice_score, nice_total, nice_matched, must_flag, matched_musts,
+    missing_musts, matched_nices, missing_nices.
+    """
+    result = {
+        "score": 0, "must_score": 0, "nice_score": 0,
+        "must_total": 0, "must_matched": 0,
+        "nice_total": 0, "nice_matched": 0,
+        "must_flag": False,
+        "matched_musts": [], "missing_musts": [],
+        "matched_nices": [], "missing_nices": [],
+    }
+
+    if not job_text or not cv_text:
+        return result
+
+    cv_kw = extract_keywords(cv_text)
+    must_kw, nice_kw = classify_requirements(description or job_text)
+
+    all_job_kw = extract_keywords(job_text)
+    job_top = all_job_kw.most_common(80)
+    important = [(w, c * (2 if w in ALL_BOOST else 1)) for w, c in job_top]
+    important.sort(key=lambda x: -x[1])
+    important = important[:50]
+
+    must_words = set()
+    nice_words = set()
+    for word, _ in important:
+        if word in nice_kw and word not in must_kw:
+            nice_words.add(word)
+        else:
+            must_words.add(word)
+
+    # Must-have scoring
+    for word, weight in important:
+        if word not in must_words:
+            continue
+        result["must_total"] += 1
+        if word in cv_kw:
+            result["must_matched"] += 1
+            result["matched_musts"].append(word)
+        else:
+            result["missing_musts"].append(word)
+
+    # Nice-to-have scoring
+    for word, weight in important:
+        if word not in nice_words:
+            continue
+        result["nice_total"] += 1
+        if word in cv_kw:
+            result["nice_matched"] += 1
+            result["matched_nices"].append(word)
+        else:
+            result["missing_nices"].append(word)
+
+    if result["must_total"]:
+        result["must_score"] = round((result["must_matched"] / result["must_total"]) * 100)
+    if result["nice_total"]:
+        result["nice_score"] = round((result["nice_matched"] / result["nice_total"]) * 100)
+
+    result["must_flag"] = result["must_total"] > 0 and result["must_score"] < 50
+    result["score"] = compute_match_score(job_text, cv_text)
+
+    return result

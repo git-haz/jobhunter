@@ -1,5 +1,6 @@
-const APP_VERSION = "0.8.0";
+const APP_VERSION = "0.9.0";
 const VERSION_HISTORY = [
+    {v:"0.9.0",d:"2026-06-27",c:["Must-have vs nice-to-have requirement detection","Red flag on jobs with <50% must-have match","Hybrid section + inline cue classification (EN/DE)","Match breakdown in detail modal"]},
     {v:"0.8.0",d:"2026-06-27",c:["Static GitHub Pages architecture","Pre-seeded job data (no server needed)","All user state in localStorage","CV matching runs in browser"]},
     {v:"0.7.0",d:"2026-06-23",c:["Arbeitsagentur API, 4dayweek, 82 plugins"]},
     {v:"0.6.0",d:"2026-06-23",c:["Kanban tracker, job detail modal, sector tabs"]},
@@ -32,6 +33,32 @@ function extractKeywords(text) {
     return counts;
 }
 
+const MUST_HEADERS = /(?:must.?have|required|requirements|what you.?(?:ll )?need|what we.?(?:re )?looking for|you bring|qualifications|essential|anforderungen|voraussetzungen|was du mitbringst|das bringst du mit|dein profil|ihr profil|what you.?(?:ll )?bring|your profile|key requirements)/i;
+const NICE_HEADERS = /(?:nice.?to.?have|bonus|preferred|desirable|optional|ideally|additional|plus|advantageous|beneficial|w[üu]nschenswert|von vorteil|idealerweise|zus[äa]tzlich|what.?s a plus|it.?s a bonus|extra points|good to have)/i;
+const MUST_CUES = /(?:must have|required|essential|mandatory|necessary|critical|you must|we require|is required|are required|zwingend|erforderlich|notwendig)/i;
+const NICE_CUES = /(?:nice to have|bonus|preferred|ideally|preferably|desirable|a plus|an advantage|not required|optional|beneficial|von vorteil|w[üu]nschenswert|idealerweise|gerne gesehen|nicht zwingend)/i;
+
+function classifyRequirements(desc) {
+    if (!desc) return { must: {}, nice: {} };
+    const lines = desc.replace(/<[^>]+>/g, "\n").split("\n").filter(l => l.trim());
+    let current = "must", sectionFound = false;
+    const mustLines = [], niceLines = [];
+    for (const line of lines) {
+        const s = line.trim();
+        if (NICE_HEADERS.test(s)) { current = "nice"; sectionFound = true; continue; }
+        if (MUST_HEADERS.test(s)) { current = "must"; sectionFound = true; continue; }
+        if (current === "must") mustLines.push(s); else niceLines.push(s);
+    }
+    if (sectionFound) return { must: extractKeywords(mustLines.join(" ")), nice: extractKeywords(niceLines.join(" ")) };
+    const ml = [], nl = [];
+    for (const line of lines) {
+        const s = line.trim();
+        if (NICE_CUES.test(s)) nl.push(s);
+        else ml.push(s);
+    }
+    return { must: extractKeywords(ml.join(" ")), nice: extractKeywords(nl.join(" ")) };
+}
+
 function matchScore(jobText, cvText) {
     if (!jobText || !cvText) return 0;
     const jk = extractKeywords(jobText), ck = extractKeywords(cvText);
@@ -44,10 +71,26 @@ function matchScore(jobText, cvText) {
     return Math.min(Math.round((matched/total)*10), 10);
 }
 
-function getMatchedKeywords(jobText, cvText) {
-    const jk = extractKeywords(jobText), ck = extractKeywords(cvText);
-    const top = Object.entries(jk).sort((a,b)=>b[1]-a[1]).slice(0,30);
-    return { matched: top.filter(([w])=>ck[w]).map(([w])=>w).slice(0,15), missing: top.filter(([w])=>!ck[w]).map(([w])=>w).slice(0,15) };
+function detailedMatch(jobText, cvText, description) {
+    const result = { score:0, mustScore:0, niceScore:0, mustTotal:0, mustMatched:0, niceTotal:0, niceMatched:0, mustFlag:false, matchedMusts:[], missingMusts:[], matchedNices:[], missingNices:[] };
+    if (!jobText || !cvText) return result;
+    const cv = extractKeywords(cvText);
+    const { must: mustKw, nice: niceKw } = classifyRequirements(description || jobText);
+    const allKw = extractKeywords(jobText);
+    let entries = Object.entries(allKw).map(([w,c]) => [w, c * (BOOST.has(w)?2:1)]);
+    entries.sort((a,b) => b[1]-a[1]);
+    entries = entries.slice(0,50);
+    const mustWords = new Set(), niceWords = new Set();
+    for (const [w] of entries) { if (niceKw[w] && !mustKw[w]) niceWords.add(w); else mustWords.add(w); }
+    for (const [w] of entries) {
+        if (mustWords.has(w)) { result.mustTotal++; if (cv[w]) { result.mustMatched++; result.matchedMusts.push(w); } else result.missingMusts.push(w); }
+        if (niceWords.has(w)) { result.niceTotal++; if (cv[w]) { result.niceMatched++; result.matchedNices.push(w); } else result.missingNices.push(w); }
+    }
+    if (result.mustTotal) result.mustScore = Math.round((result.mustMatched/result.mustTotal)*100);
+    if (result.niceTotal) result.niceScore = Math.round((result.niceMatched/result.niceTotal)*100);
+    result.mustFlag = result.mustTotal > 0 && result.mustScore < 50;
+    result.score = matchScore(jobText, cvText);
+    return result;
 }
 
 // --- SECTOR ---
@@ -78,7 +121,18 @@ async function init() {
 
     const cv = getCV();
     if (cv) {
-        for (const j of JOBS) { j._score = matchScore(`${j.title} ${j.description||""} ${j.department||""}`, cv); }
+        for (const j of JOBS) {
+            const jt = `${j.title} ${j.description||""} ${j.department||""}`;
+            const dm = detailedMatch(jt, cv, j.description||"");
+            j._score = dm.score;
+            j._mustScore = dm.mustScore;
+            j._mustFlag = dm.mustFlag;
+            j._mustTotal = dm.mustTotal;
+            j._mustMatched = dm.mustMatched;
+            j._niceScore = dm.niceScore;
+            j._niceTotal = dm.niceTotal;
+            j._niceMatched = dm.niceMatched;
+        }
     }
     document.getElementById("cv-banner").style.display = cv ? "none" : "flex";
     if (cv) { document.getElementById("cv-current").innerHTML = `<article><p><strong>CV loaded</strong> (${cv.length} chars) · <a href="#" onclick="clearCV()">Remove</a></p></article>`; }
@@ -201,6 +255,8 @@ function renderJobs(jobs) {
                     <div class="job-footer">
                         <small class="job-date">${(j.first_seen||"").slice(0,10)}</small>
                         ${score?`<span class="match-badge match-${score>=8?"high":score>=5?"mid":"low"}">${score}/10</span>`:""}
+                        ${j._mustFlag?`<span class="must-flag" title="Must-have match below 50%">⚠ Must-haves: ${j._mustMatched||0}/${j._mustTotal||0}</span>`:""}
+                        ${(j._mustTotal && !j._mustFlag)?`<span class="must-ok" title="Must-have match">${j._mustMatched}/${j._mustTotal} musts</span>`:""}
                         <small class="status-label status-${st}">${st}</small>
                     </div>
                 </div>
@@ -255,9 +311,25 @@ function openDetail(idx) {
     let kwHtml = "";
     const cv = getCV();
     if (cv && j.description) {
-        const kw = getMatchedKeywords(`${j.title} ${j.description} ${j.department||""}`, cv);
-        if (kw.matched.length) kwHtml += `<div class="kw-section"><strong>Matched:</strong> ${kw.matched.map(w=>`<span class="kw-match">${w}</span>`).join(" ")}</div>`;
-        if (kw.missing.length) kwHtml += `<div class="kw-section"><strong>Missing from CV:</strong> ${kw.missing.map(w=>`<span class="kw-miss">${w}</span>`).join(" ")}</div>`;
+        const jt = `${j.title} ${j.description} ${j.department||""}`;
+        const dm = detailedMatch(jt, cv, j.description);
+
+        if (dm.mustTotal || dm.niceTotal) {
+            kwHtml += `<div class="match-breakdown">`;
+            if (dm.mustTotal) {
+                kwHtml += `<div class="mb-row ${dm.mustFlag?"mb-flag":""}"><strong>Must-haves:</strong> ${dm.mustMatched}/${dm.mustTotal} (${dm.mustScore}%)${dm.mustFlag?" ⚠":""}`;
+                if (dm.matchedMusts.length) kwHtml += `<br>${dm.matchedMusts.map(w=>`<span class="kw-match">${w}</span>`).join(" ")}`;
+                if (dm.missingMusts.length) kwHtml += `<br>${dm.missingMusts.map(w=>`<span class="kw-miss">${w}</span>`).join(" ")}`;
+                kwHtml += `</div>`;
+            }
+            if (dm.niceTotal) {
+                kwHtml += `<div class="mb-row"><strong>Nice-to-haves:</strong> ${dm.niceMatched}/${dm.niceTotal} (${dm.niceScore}%)`;
+                if (dm.matchedNices.length) kwHtml += `<br>${dm.matchedNices.map(w=>`<span class="kw-match">${w}</span>`).join(" ")}`;
+                if (dm.missingNices.length) kwHtml += `<br>${dm.missingNices.map(w=>`<span class="kw-miss">${w}</span>`).join(" ")}`;
+                kwHtml += `</div>`;
+            }
+            kwHtml += `</div>`;
+        }
     }
     document.getElementById("detail-keywords").innerHTML = kwHtml;
     document.getElementById("detail-description").textContent = j.description || "No description available.";
@@ -325,7 +397,18 @@ function saveCV() {
     const text = document.getElementById("cv-input").value.trim();
     if (!text) return;
     saveState("cv_text", text);
-    for (const j of JOBS) j._score = matchScore(`${j.title} ${j.description||""} ${j.department||""}`, text);
+    for (const j of JOBS) {
+        const jt = `${j.title} ${j.description||""} ${j.department||""}`;
+        const dm = detailedMatch(jt, text, j.description||"");
+        j._score = dm.score;
+        j._mustScore = dm.mustScore;
+        j._mustFlag = dm.mustFlag;
+        j._mustTotal = dm.mustTotal;
+        j._mustMatched = dm.mustMatched;
+        j._niceScore = dm.niceScore;
+        j._niceTotal = dm.niceTotal;
+        j._niceMatched = dm.niceMatched;
+    }
     document.getElementById("cv-banner").style.display = "none";
     renderCV();
     alert(`CV saved (${text.length} characters). Match scores updated.`);
