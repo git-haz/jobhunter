@@ -1,5 +1,6 @@
-const APP_VERSION = "0.9.0";
+const APP_VERSION = "0.9.2";
 const VERSION_HISTORY = [
+    {v:"0.9.2",d:"2026-06-27",c:["Search criteria expanded to all of Germany","Retrieved date filter and display","232 jobs seeded from 82 sources"]},
     {v:"0.9.0",d:"2026-06-27",c:["Must-have vs nice-to-have requirement detection","Red flag on jobs with <50% must-have match","Hybrid section + inline cue classification (EN/DE)","Match breakdown in detail modal"]},
     {v:"0.8.0",d:"2026-06-27",c:["Static GitHub Pages architecture","Pre-seeded job data (no server needed)","All user state in localStorage","CV matching runs in browser"]},
     {v:"0.7.0",d:"2026-06-23",c:["Arbeitsagentur API, 4dayweek, 82 plugins"]},

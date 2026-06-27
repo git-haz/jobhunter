@@ -16,10 +16,13 @@ SEED_FILTERS = {
 }
 
 LOCATION_KEYWORDS = [
-    "munich", "münchen", "muenchen", "germany", "deutschland",
-    "berlin", "hamburg", "frankfurt", "cologne", "köln", "düsseldorf",
-    "stuttgart", "remote", "eu", "europe", "emea", "dach", "worldwide",
-    "global",
+    "germany", "deutschland", "de",
+    "munich", "münchen", "muenchen", "berlin", "hamburg", "frankfurt",
+    "cologne", "köln", "düsseldorf", "stuttgart", "hannover", "nürnberg",
+    "nuremberg", "bremen", "dresden", "leipzig", "dortmund", "essen",
+    "bonn", "mannheim", "karlsruhe", "freiburg", "augsburg", "regensburg",
+    "heidelberg", "darmstadt", "wiesbaden", "mainz", "aachen", "bielefeld",
+    "remote", "eu", "europe", "emea", "dach", "worldwide", "global",
 ]
 
 TITLE_KEYWORDS = ["product", "produkt"]
@@ -83,7 +86,7 @@ def run_seed():
         "errors": len(errors),
         "criteria": {
             "title_contains": TITLE_KEYWORDS,
-            "location": "Munich +50km / Germany / EU / Remote",
+            "location": "All of Germany / EU / Remote",
         },
         "jobs": all_jobs,
     }
