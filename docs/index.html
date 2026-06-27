@@ -35,7 +35,13 @@
                 <summary>Search &amp; Filters</summary>
                 <div class="filters-form">
                     <div class="grid">
-                        <label>Job Title <input type="text" id="f-title" placeholder="e.g. product manager"></label>
+                        <label>Job Title
+                            <div class="multi-select" id="title-filter">
+                                <div class="ms-selected" id="title-chips"></div>
+                                <input type="text" id="title-search" placeholder="Type to search titles..." autocomplete="off">
+                                <div class="ms-dropdown" id="title-dropdown"></div>
+                            </div>
+                        </label>
                         <label>Location <input type="text" id="f-location" placeholder="e.g. Munich"></label>
                         <label>Work Mode
                             <select id="f-workmode">

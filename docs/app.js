@@ -1,5 +1,6 @@
-const APP_VERSION = "0.9.2";
+const APP_VERSION = "0.9.3";
 const VERSION_HISTORY = [
+    {v:"0.9.3",d:"2026-06-27",c:["Job title multi-select with typeahead from cleaned seed titles","Title cleaning: strips gender markers, company names, seniority prefixes","Custom title entry via Enter key"]},
     {v:"0.9.2",d:"2026-06-27",c:["Search criteria expanded to all of Germany","Retrieved date filter and display","232 jobs seeded from 82 sources"]},
     {v:"0.9.0",d:"2026-06-27",c:["Must-have vs nice-to-have requirement detection","Red flag on jobs with <50% must-have match","Hybrid section + inline cue classification (EN/DE)","Match breakdown in detail modal"]},
     {v:"0.8.0",d:"2026-06-27",c:["Static GitHub Pages architecture","Pre-seeded job data (no server needed)","All user state in localStorage","CV matching runs in browser"]},
@@ -135,9 +136,11 @@ async function init() {
             j._niceMatched = dm.niceMatched;
         }
     }
+    buildTitleOptions();
     document.getElementById("cv-banner").style.display = cv ? "none" : "flex";
     if (cv) { document.getElementById("cv-current").innerHTML = `<article><p><strong>CV loaded</strong> (${cv.length} chars) · <a href="#" onclick="clearCV()">Remove</a></p></article>`; }
 
+    initTitleFilter();
     applyFilters();
     buildStatusSelect(document.getElementById("detail-status"));
 }
@@ -156,6 +159,107 @@ function showView(name) {
     if (name === "cv") renderCV();
 }
 
+// --- TITLE CLEANING ---
+function cleanTitle(raw) {
+    let t = raw;
+    // Remove gender markers
+    t = t.replace(/\s*\(?\s*[mwfd]\s*[\/\|]\s*[mwfd]\s*(?:[\/\|]\s*[mwfd])?\s*\)?\s*/gi, " ");
+    t = t.replace(/\s*\(?\s*all\s+genders?\s*\)?\s*/gi, " ");
+    t = t.replace(/\s*\(?\s*gn\s*\)?\s*/gi, " ");
+    t = t.replace(/\*\s*in\b/g, "");
+    // Remove everything after separators that indicate company/location
+    t = t.replace(/\s*[|@—–]\s*.{3,}$/, "");
+    t = t.replace(/\s+(?:bei|at|für|for)\s+[A-Z].{2,}$/, "");
+    // Remove leading (Senior) / (Junior) etc in parens — keep the core title
+    t = t.replace(/^\s*\((?:Senior|Junior|Lead|Staff|Principal|Head of)\)\s*/i, "");
+    // Remove seniority prefix for grouping
+    t = t.replace(/^\s*(?:Senior|Junior|Lead|Principal|Staff|Head of|Sr\.|Jr\.)\s+/i, "");
+    // Clean up
+    t = t.replace(/\s{2,}/g, " ").replace(/\s*[-–—]\s*$/, "").trim();
+    return t;
+}
+
+let TITLE_OPTIONS = [];
+function buildTitleOptions() {
+    const counts = {};
+    for (const j of JOBS) {
+        const clean = cleanTitle(j.title);
+        j._cleanTitle = clean;
+        const key = clean.toLowerCase();
+        if (!counts[key]) counts[key] = { label: clean, count: 0 };
+        counts[key].count++;
+    }
+    TITLE_OPTIONS = Object.values(counts)
+        .filter(t => t.count >= 2)
+        .sort((a, b) => b.count - a.count);
+}
+
+let selectedTitles = new Set();
+function initTitleFilter() {
+    const chips = document.getElementById("title-chips");
+    const input = document.getElementById("title-search");
+    const dropdown = document.getElementById("title-dropdown");
+
+    function render() {
+        chips.innerHTML = "";
+        selectedTitles.forEach(t => {
+            const chip = document.createElement("span");
+            chip.className = "ms-chip";
+            chip.innerHTML = `${esc(t)} <span class="ms-chip-x" data-t="${esc(t)}">&times;</span>`;
+            chips.appendChild(chip);
+        });
+        chips.querySelectorAll(".ms-chip-x").forEach(x => {
+            x.onclick = () => { selectedTitles.delete(x.dataset.t); render(); applyFilters(); };
+        });
+    }
+
+    function showDropdown(filter) {
+        const q = filter.toLowerCase();
+        const matches = TITLE_OPTIONS.filter(t => !selectedTitles.has(t.label) && t.label.toLowerCase().includes(q));
+        if (!matches.length && !q) { dropdown.style.display = "none"; return; }
+        let html = matches.slice(0, 15).map(t =>
+            `<div class="ms-option" data-t="${esc(t.label)}">${esc(t.label)} <small>(${t.count})</small></div>`
+        ).join("");
+        if (q && !matches.some(t => t.label.toLowerCase() === q)) {
+            html += `<div class="ms-option ms-custom" data-t="${esc(filter.trim())}">+ "${esc(filter.trim())}"</div>`;
+        }
+        dropdown.innerHTML = html;
+        dropdown.style.display = html ? "block" : "none";
+        dropdown.querySelectorAll(".ms-option").forEach(opt => {
+            opt.onmousedown = (e) => {
+                e.preventDefault();
+                selectedTitles.add(opt.dataset.t);
+                input.value = "";
+                dropdown.style.display = "none";
+                render();
+                applyFilters();
+            };
+        });
+    }
+
+    input.addEventListener("input", () => showDropdown(input.value));
+    input.addEventListener("focus", () => showDropdown(input.value));
+    input.addEventListener("blur", () => setTimeout(() => dropdown.style.display = "none", 150));
+    input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && input.value.trim()) {
+            e.preventDefault();
+            selectedTitles.add(input.value.trim());
+            input.value = "";
+            dropdown.style.display = "none";
+            render();
+            applyFilters();
+        }
+        if (e.key === "Backspace" && !input.value && selectedTitles.size) {
+            const last = Array.from(selectedTitles).pop();
+            selectedTitles.delete(last);
+            render();
+            applyFilters();
+        }
+    });
+
+    render();
+}
+
 // --- FILTERING ---
 function parseExclude(raw) {
     if (!raw) return [];
@@ -164,7 +268,7 @@ function parseExclude(raw) {
 }
 
 function applyFilters() {
-    const title = document.getElementById("f-title").value.toLowerCase().trim();
+    const titleFilters = Array.from(selectedTitles).map(t => t.toLowerCase());
     const loc = document.getElementById("f-location").value.toLowerCase().trim();
     const wm = document.getElementById("f-workmode").value;
     const company = document.getElementById("f-company").value.toLowerCase().trim();
@@ -180,7 +284,7 @@ function applyFilters() {
     const uj = getUserJobs();
     let filtered = JOBS.filter(j => {
         const jStatus = uj[j.url]?.status || "new";
-        if (title && !j.title.toLowerCase().includes(title)) return false;
+        if (titleFilters.length && !titleFilters.some(t => (j._cleanTitle||j.title).toLowerCase().includes(t))) return false;
         if (loc && !(j.location||"").toLowerCase().includes(loc)) return false;
         if (wm && !(j.work_mode||"").toLowerCase().includes(wm)) return false;
         if (company && !(j.source||"").toLowerCase().includes(company)) return false;
@@ -208,7 +312,10 @@ function applyFilters() {
 }
 
 function clearFilters() {
-    ["f-title","f-location","f-company","f-dept","f-exclude","f-date-from","f-date-to"].forEach(id => document.getElementById(id).value = "");
+    ["f-location","f-company","f-dept","f-exclude","f-date-from","f-date-to"].forEach(id => document.getElementById(id).value = "");
+    selectedTitles.clear();
+    document.getElementById("title-chips").innerHTML = "";
+    document.getElementById("title-search").value = "";
     ["f-workmode","f-level","f-status"].forEach(id => document.getElementById(id).value = "");
     document.getElementById("f-match").value = "0";
     document.getElementById("f-sort").value = "date_desc";

@@ -8,6 +8,18 @@
 .filters-section[open] > summary { border-bottom: 1px solid var(--pico-muted-border-color); }
 .filters-form { padding: 0.75rem 1rem; }
 .filters-form .grid { margin-bottom: 0.5rem; }
+.multi-select { position: relative; border: 1px solid var(--pico-form-element-border-color); border-radius: var(--pico-border-radius); padding: 0.35rem 0.5rem; background: var(--pico-form-element-background-color); min-height: 2.5rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; cursor: text; }
+.multi-select:focus-within { border-color: var(--pico-form-element-active-border-color); }
+.ms-selected { display: contents; }
+.ms-chip { display: inline-flex; align-items: center; gap: 0.2rem; background: #e3f2fd; color: #1565c0; padding: 0.1rem 0.45rem; border-radius: 10px; font-size: 0.78rem; white-space: nowrap; }
+.ms-chip-x { cursor: pointer; font-size: 0.9rem; line-height: 1; opacity: 0.7; }
+.ms-chip-x:hover { opacity: 1; }
+.multi-select input[type="text"] { border: none; outline: none; background: transparent; padding: 0; margin: 0; min-width: 80px; flex: 1; font-size: 0.9rem; height: auto; }
+.ms-dropdown { display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--pico-card-background-color); border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); max-height: 200px; overflow-y: auto; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.ms-option { padding: 0.4rem 0.75rem; cursor: pointer; font-size: 0.9rem; }
+.ms-option:hover { background: var(--pico-primary-focus); }
+.ms-option small { opacity: 0.5; }
+.ms-custom { font-style: italic; opacity: 0.8; }
 .filter-actions { display: flex; align-items: flex-end; gap: 0.5rem; }
 .filter-actions label { flex: 1; }
 .filter-actions button { margin-bottom: 0; white-space: nowrap; height: fit-content; }
