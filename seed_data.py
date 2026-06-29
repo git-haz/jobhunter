@@ -16,13 +16,33 @@ SEED_FILTERS = {
 }
 
 LOCATION_KEYWORDS = [
+    # Germany
     "germany", "deutschland", "de",
     "munich", "münchen", "muenchen", "berlin", "hamburg", "frankfurt",
     "cologne", "köln", "düsseldorf", "stuttgart", "hannover", "nürnberg",
     "nuremberg", "bremen", "dresden", "leipzig", "dortmund", "essen",
     "bonn", "mannheim", "karlsruhe", "freiburg", "augsburg", "regensburg",
     "heidelberg", "darmstadt", "wiesbaden", "mainz", "aachen", "bielefeld",
-    "remote", "eu", "europe", "emea", "dach", "worldwide", "global",
+    # UK
+    "uk", "united kingdom", "london", "manchester", "birmingham", "edinburgh",
+    "glasgow", "bristol", "leeds", "cambridge", "oxford", "liverpool",
+    # Europe
+    "europe", "eu", "emea", "dach",
+    "amsterdam", "netherlands", "vienna", "austria", "zurich", "switzerland",
+    "paris", "france", "dublin", "ireland", "barcelona", "madrid", "spain",
+    "lisbon", "portugal", "copenhagen", "denmark", "stockholm", "sweden",
+    "oslo", "norway", "helsinki", "finland", "prague", "czech",
+    "warsaw", "poland", "brussels", "belgium", "milan", "italy",
+    # Remote / global
+    "remote", "worldwide", "global", "anywhere",
+]
+
+EXCLUDE_LOCATIONS = [
+    "united states", " us ", " usa ", "new york", "san francisco",
+    "los angeles", "chicago", "seattle", "boston", "austin", "denver",
+    "atlanta", "dallas", "houston", "miami", "portland", "philadelphia",
+    "phoenix", "san diego", "san jose", "raleigh", "charlotte",
+    "americas only", "us only", "usa only",
 ]
 
 TITLE_KEYWORDS = ["product", "produkt"]
@@ -34,6 +54,9 @@ def matches_criteria(job):
         return False
     location = (job.get("location") or "").lower()
     work_mode = (job.get("work_mode") or "").lower()
+    # Exclude US-based roles
+    if any(us in f" {location} " for us in EXCLUDE_LOCATIONS):
+        return False
     if "remote" in work_mode or "remote" in location:
         return True
     if any(kw in location for kw in LOCATION_KEYWORDS):
@@ -44,9 +67,17 @@ def matches_criteria(job):
 
 
 def run_seed():
-    all_jobs = []
+    # Load existing seed data to merge
+    existing_jobs = []
+    if os.path.exists(OUTPUT_PATH):
+        with open(OUTPUT_PATH, "r", encoding="utf-8") as f:
+            old = json.load(f)
+            existing_jobs = old.get("jobs", [])
+        print(f"Loaded {len(existing_jobs)} existing jobs for merge.")
+
+    all_jobs = list(existing_jobs)
     errors = []
-    seen_urls = set()
+    seen_urls = {j.get("url") for j in existing_jobs if j.get("url")}
 
     plugin_files = sorted(f for f in os.listdir(PLUGINS_DIR) if f.endswith((".yaml", ".yml")))
     total = len(plugin_files)
@@ -86,7 +117,7 @@ def run_seed():
         "errors": len(errors),
         "criteria": {
             "title_contains": TITLE_KEYWORDS,
-            "location": "All of Germany / EU / Remote",
+            "location": "Germany / UK / Europe / Remote (excl. US)",
         },
         "jobs": all_jobs,
     }
