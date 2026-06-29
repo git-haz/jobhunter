@@ -1,5 +1,6 @@
-const APP_VERSION = "0.9.3";
+const APP_VERSION = "1.0.0";
 const VERSION_HISTORY = [
+    {v:"1.0.0",d:"2026-06-29",c:["Scorecard-based matching: skills weighted by your PM skills ratings (1-5)","Must-haves weighted 70%, nice-to-haves 30%","Red flag when must-have weighted score below 50%","Click job cards to open full detail view","Detail modal shows scorecard breakdown per skill with rating"]},
     {v:"0.9.3",d:"2026-06-27",c:["Job title multi-select with typeahead from cleaned seed titles","Title cleaning: strips gender markers, company names, seniority prefixes","Custom title entry via Enter key"]},
     {v:"0.9.2",d:"2026-06-27",c:["Search criteria expanded to all of Germany","Retrieved date filter and display","232 jobs seeded from 82 sources"]},
     {v:"0.9.0",d:"2026-06-27",c:["Must-have vs nice-to-have requirement detection","Red flag on jobs with <50% must-have match","Hybrid section + inline cue classification (EN/DE)","Match breakdown in detail modal"]},
@@ -24,16 +25,44 @@ function getUserJobs() { return loadState("user_jobs", {}); }
 function setUserJob(url, data) { const uj = getUserJobs(); uj[url] = {...(uj[url]||{}), ...data}; saveState("user_jobs", uj); }
 function getCV() { return loadState("cv_text", ""); }
 
-// --- MATCHING ---
-const STOP = new Set("a an the and or but in on at to for of is are was were be been being have has had do does did will would shall should may might can could this that these those it its with from by as into through during before after above below between out off over under again further then once here there when where why how all both each few more most other some such no nor not only own same so than too very just about up also well back even still new now old get got make made way us our them their we you your he she they him his her who what which whom me my myself we our ours ourselves she her hers herself he his him himself they their theirs themselves itself i am if job role work team company will join looking apply please candidate required requirements experience years year must strong good great key ability able ensure including include includes working within across using used use part based responsible responsibilities description qualifications preferred ideal join help build create support der die das ein eine einer eines einem den dem und oder aber in auf zu für von ist sind war waren wird werden hat haben wir sie er es mit als auch nach über bei aus durch noch nicht oder ihre ihr ihren seiner seinem wenn an um eine einen am dann so dass ob schon".split(" "));
-const BOOST = new Set("saas b2b b2c enterprise startup fintech insurtech healthtech traveltech airline aviation booking reservation gds amadeus hospitality gdpr compliance security iso soc product management roadmap okr kpi stakeholder project pmp prince2 waterfall lean six sigma leadership strategy budget revenue growth jira confluence git github gitlab figma sketch power bi airflow etl spark hadoop docker kubernetes aws azure gcp ansible rest api graphql microservices salesforce hubspot shopify stripe snowflake databricks kafka elasticsearch sap oracle workday personio agile scrum kanban ci cd devops german english spanish bilingual multilingual".split(" "));
-
-function extractKeywords(text) {
-    const words = text.toLowerCase().replace(/<[^>]+>/g," ").replace(/[^\w\s+#.]/g," ").split(/\s+/);
-    const counts = {};
-    for (const w of words) { const c = w.replace(/\./g,""); if (c.length < 2 || STOP.has(c) || /^\d+$/.test(c)) continue; counts[c] = (counts[c]||0)+1; }
-    return counts;
-}
+// --- SCORECARD-BASED MATCHING ---
+const SCORECARD = {
+    "product strategy":4, "roadmap":5, "roadmap ownership":5, "prioritisation":4, "prioritization":4,
+    "business case":3, "business case development":3,
+    "api":5, "api design":5, "platform architecture":5, "integrations":5, "integration":5,
+    "data modelling":4, "data modeling":4, "sql":3,
+    "cloud":2, "etl":2, "pipelines":2, "pipeline":2,
+    "technical documentation":4,
+    "workflow optimisation":5, "workflow optimization":5, "process optimization":5,
+    "discovery":4, "structured discovery":4, "user research":4,
+    "experimentation":2, "ab testing":2, "a/b testing":2,
+    "kpi":3, "kpi ownership":3, "metrics":3,
+    "cross functional":5, "cross-functional":5, "cross functional leadership":5,
+    "stakeholder management":5, "stakeholder":5,
+    "leading without authority":5, "influence":5,
+    "people management":1, "team management":1, "direct reports":1, "line management":1,
+    "mentoring":3, "coaching":3,
+    "agile":5, "scrum":5, "kanban":5,
+    "backlog":5, "backlog ownership":5,
+    "release planning":4, "release management":4,
+    "cross team coordination":5, "cross-team":5,
+    "airline":5, "airline it":5, "aviation":5, "iata":5, "ndc":5, "pss":5, "gds":5, "amadeus":5,
+    "traveltech":5, "travel tech":5, "travel":5, "booking":5, "reservation":5,
+    "insurtech":4, "insurance":4,
+    "fintech":3, "finance":3, "banking":3,
+    "ecommerce":3, "e-commerce":3, "e commerce":3,
+    "crm":2, "salesforce":2, "marketing automation":2,
+    "translating complexity":5, "simplifying complexity":5,
+    "executive communication":4, "c-level":4, "board level":4,
+    "requirements elicitation":5, "requirements":5, "specification":5,
+    "cross market":5, "cross-market":5, "international":5, "multilingual":5, "multicultural":5,
+    "product management":5, "product manager":5, "product owner":5,
+    "jira":5, "confluence":5, "figma":4,
+    "saas":4, "b2b":4, "b2c":3, "enterprise":4, "startup":4,
+    "gdpr":4, "compliance":4, "data protection":4,
+    "german":5, "english":5, "bilingual":5,
+    "okr":4, "strategy":4, "leadership":5, "roadmapping":5,
+};
 
 const MUST_HEADERS = /(?:must.?have|required|requirements|what you.?(?:ll )?need|what we.?(?:re )?looking for|you bring|qualifications|essential|anforderungen|voraussetzungen|was du mitbringst|das bringst du mit|dein profil|ihr profil|what you.?(?:ll )?bring|your profile|key requirements)/i;
 const NICE_HEADERS = /(?:nice.?to.?have|bonus|preferred|desirable|optional|ideally|additional|plus|advantageous|beneficial|w[üu]nschenswert|von vorteil|idealerweise|zus[äa]tzlich|what.?s a plus|it.?s a bonus|extra points|good to have)/i;
@@ -41,7 +70,7 @@ const MUST_CUES = /(?:must have|required|essential|mandatory|necessary|critical|
 const NICE_CUES = /(?:nice to have|bonus|preferred|ideally|preferably|desirable|a plus|an advantage|not required|optional|beneficial|von vorteil|w[üu]nschenswert|idealerweise|gerne gesehen|nicht zwingend)/i;
 
 function classifyRequirements(desc) {
-    if (!desc) return { must: {}, nice: {} };
+    if (!desc) return { mustText: "", niceText: "" };
     const lines = desc.replace(/<[^>]+>/g, "\n").split("\n").filter(l => l.trim());
     let current = "must", sectionFound = false;
     const mustLines = [], niceLines = [];
@@ -51,48 +80,77 @@ function classifyRequirements(desc) {
         if (MUST_HEADERS.test(s)) { current = "must"; sectionFound = true; continue; }
         if (current === "must") mustLines.push(s); else niceLines.push(s);
     }
-    if (sectionFound) return { must: extractKeywords(mustLines.join(" ")), nice: extractKeywords(niceLines.join(" ")) };
+    if (sectionFound) return { mustText: mustLines.join(" "), niceText: niceLines.join(" ") };
     const ml = [], nl = [];
     for (const line of lines) {
         const s = line.trim();
-        if (NICE_CUES.test(s)) nl.push(s);
-        else ml.push(s);
+        if (NICE_CUES.test(s)) nl.push(s); else ml.push(s);
     }
-    return { must: extractKeywords(ml.join(" ")), nice: extractKeywords(nl.join(" ")) };
+    return { mustText: ml.join(" "), niceText: nl.join(" ") };
 }
 
-function matchScore(jobText, cvText) {
-    if (!jobText || !cvText) return 0;
-    const jk = extractKeywords(jobText), ck = extractKeywords(cvText);
-    let entries = Object.entries(jk).map(([w,c]) => [w, c * (BOOST.has(w)?2:1)]);
-    entries.sort((a,b) => b[1]-a[1]);
-    entries = entries.slice(0,50);
-    if (!entries.length) return 0;
-    let matched=0, total=0;
-    for (const [w,wt] of entries) { total+=wt; if (ck[w]) matched+=wt; }
-    return Math.min(Math.round((matched/total)*10), 10);
+function findScorecardMatches(text) {
+    const lower = text.toLowerCase().replace(/<[^>]+>/g, " ");
+    const found = [];
+    const sorted = Object.entries(SCORECARD).sort((a, b) => b[0].length - a[0].length);
+    const used = new Set();
+    for (const [skill, rating] of sorted) {
+        if (lower.includes(skill) && !used.has(skill)) {
+            used.add(skill);
+            found.push({ skill, rating, weight: rating / 5 });
+        }
+    }
+    return found;
 }
 
 function detailedMatch(jobText, cvText, description) {
-    const result = { score:0, mustScore:0, niceScore:0, mustTotal:0, mustMatched:0, niceTotal:0, niceMatched:0, mustFlag:false, matchedMusts:[], missingMusts:[], matchedNices:[], missingNices:[] };
-    if (!jobText || !cvText) return result;
-    const cv = extractKeywords(cvText);
-    const { must: mustKw, nice: niceKw } = classifyRequirements(description || jobText);
-    const allKw = extractKeywords(jobText);
-    let entries = Object.entries(allKw).map(([w,c]) => [w, c * (BOOST.has(w)?2:1)]);
-    entries.sort((a,b) => b[1]-a[1]);
-    entries = entries.slice(0,50);
-    const mustWords = new Set(), niceWords = new Set();
-    for (const [w] of entries) { if (niceKw[w] && !mustKw[w]) niceWords.add(w); else mustWords.add(w); }
-    for (const [w] of entries) {
-        if (mustWords.has(w)) { result.mustTotal++; if (cv[w]) { result.mustMatched++; result.matchedMusts.push(w); } else result.missingMusts.push(w); }
-        if (niceWords.has(w)) { result.niceTotal++; if (cv[w]) { result.niceMatched++; result.matchedNices.push(w); } else result.missingNices.push(w); }
+    const result = {
+        score: 0, mustScore: 0, niceScore: 0,
+        mustTotal: 0, mustWeighted: 0, mustMax: 0,
+        niceTotal: 0, niceWeighted: 0, niceMax: 0,
+        mustFlag: false,
+        matchedMusts: [], missingMusts: [], matchedNices: [], missingNices: [],
+    };
+    if (!description && !jobText) return result;
+
+    const { mustText, niceText } = classifyRequirements(description || jobText);
+    const mustSkills = findScorecardMatches(mustText);
+    const niceSkills = findScorecardMatches(niceText);
+
+    result.mustTotal = mustSkills.length;
+    result.niceTotal = niceSkills.length;
+
+    for (const s of mustSkills) {
+        result.mustMax++;
+        result.mustWeighted += s.weight;
+        result.matchedMusts.push({ skill: s.skill, rating: s.rating });
     }
-    if (result.mustTotal) result.mustScore = Math.round((result.mustMatched/result.mustTotal)*100);
-    if (result.niceTotal) result.niceScore = Math.round((result.niceMatched/result.niceTotal)*100);
+
+    for (const s of niceSkills) {
+        result.niceMax++;
+        result.niceWeighted += s.weight;
+        result.matchedNices.push({ skill: s.skill, rating: s.rating });
+    }
+
+    if (result.mustMax) result.mustScore = Math.round((result.mustWeighted / result.mustMax) * 100);
+    if (result.niceMax) result.niceScore = Math.round((result.niceWeighted / result.niceMax) * 100);
+
+    const mustRatio = result.mustMax ? result.mustWeighted / result.mustMax : 0;
+    const niceRatio = result.niceMax ? result.niceWeighted / result.niceMax : 0;
+    result.score = Math.min(Math.round((mustRatio * 0.7 + niceRatio * 0.3) * 10), 10);
+
     result.mustFlag = result.mustTotal > 0 && result.mustScore < 50;
-    result.score = matchScore(jobText, cvText);
+
+    // Find skills mentioned in job but NOT in scorecard (unmatched)
+    const allText = (mustText + " " + niceText).toLowerCase();
+    const allMatched = new Set([...mustSkills, ...niceSkills].map(s => s.skill));
+    // Not tracking unmatched for now — the scorecard is the source of truth
+
     return result;
+}
+
+function matchScore(jobText, cvText, description) {
+    return detailedMatch(jobText, cvText, description).score;
 }
 
 // --- SECTOR ---
@@ -121,20 +179,16 @@ async function init() {
 
     document.getElementById("seed-info").innerHTML = `<small>Data seeded: <strong>${data.seeded_at?.slice(0,16).replace("T"," ")||"?"} UTC</strong> · ${data.total_jobs} jobs from ${data.sources_queried} sources</small>`;
 
-    const cv = getCV();
-    if (cv) {
-        for (const j of JOBS) {
-            const jt = `${j.title} ${j.description||""} ${j.department||""}`;
-            const dm = detailedMatch(jt, cv, j.description||"");
-            j._score = dm.score;
-            j._mustScore = dm.mustScore;
-            j._mustFlag = dm.mustFlag;
-            j._mustTotal = dm.mustTotal;
-            j._mustMatched = dm.mustMatched;
-            j._niceScore = dm.niceScore;
-            j._niceTotal = dm.niceTotal;
-            j._niceMatched = dm.niceMatched;
-        }
+    for (const j of JOBS) {
+        const jt = `${j.title} ${j.description||""} ${j.department||""}`;
+        const dm = detailedMatch(jt, "", j.description||"");
+        j._score = dm.score;
+        j._dm = dm;
+        j._mustScore = dm.mustScore;
+        j._mustFlag = dm.mustFlag;
+        j._mustTotal = dm.mustTotal;
+        j._niceScore = dm.niceScore;
+        j._niceTotal = dm.niceTotal;
     }
     buildTitleOptions();
     document.getElementById("cv-banner").style.display = cv ? "none" : "flex";
@@ -350,10 +404,10 @@ function renderJobs(jobs) {
         const score = j._score||0;
         count++;
         html += `<article class="job-card" data-url="${esc(j.url)}">
-            <div class="job-card-body">
+            <div class="job-card-body" onclick="openDetail(${JOBS.indexOf(j)})" style="cursor:pointer">
                 <div class="job-logo"><img src="${fav}" width="48" height="48" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 rx=%228%22 fill=%22%23667%22/><text x=%2224%22 y=%2232%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2220%22>${initial}</text></svg>'"></div>
                 <div class="job-info">
-                    <h3><a href="${esc(j.url)}" target="_blank" rel="noopener">${esc(j.title)}</a></h3>
+                    <h3>${esc(j.title)}</h3>
                     <div class="job-company">${esc(j.source)}</div>
                     <div class="job-tags">
                         ${j.location?`<span class="tag tag-location">${esc(j.location)}</span>`:""}
@@ -367,8 +421,8 @@ function renderJobs(jobs) {
                     <div class="job-footer">
                         <small class="job-date" title="Retrieved: ${(j.retrieved_at||"").slice(0,16).replace("T"," ")}">${(j.retrieved_at||j.first_seen||"").slice(0,10)}</small>
                         ${score?`<span class="match-badge match-${score>=8?"high":score>=5?"mid":"low"}">${score}/10</span>`:""}
-                        ${j._mustFlag?`<span class="must-flag" title="Must-have match below 50%">⚠ Must-haves: ${j._mustMatched||0}/${j._mustTotal||0}</span>`:""}
-                        ${(j._mustTotal && !j._mustFlag)?`<span class="must-ok" title="Must-have match">${j._mustMatched}/${j._mustTotal} musts</span>`:""}
+                        ${j._mustFlag?`<span class="must-flag" title="Must-have weighted score below 50%">⚠ Musts: ${j._mustScore}%</span>`:""}
+                        ${(j._mustTotal && !j._mustFlag)?`<span class="must-ok" title="Must-have weighted score">Musts: ${j._mustScore}%</span>`:""}
                         <small class="status-label status-${st}">${st}</small>
                     </div>
                 </div>
@@ -420,28 +474,24 @@ function openDetail(idx) {
     if (j._score) { const cls = j._score>=8?"high":j._score>=5?"mid":"low"; meta += ` · <span class="match-badge match-${cls}">${j._score}/10</span>`; }
     document.getElementById("detail-meta").innerHTML = meta;
 
+    const dm = j._dm || detailedMatch(`${j.title} ${j.description||""} ${j.department||""}`, "", j.description||"");
     let kwHtml = "";
-    const cv = getCV();
-    if (cv && j.description) {
-        const jt = `${j.title} ${j.description} ${j.department||""}`;
-        const dm = detailedMatch(jt, cv, j.description);
-
-        if (dm.mustTotal || dm.niceTotal) {
-            kwHtml += `<div class="match-breakdown">`;
-            if (dm.mustTotal) {
-                kwHtml += `<div class="mb-row ${dm.mustFlag?"mb-flag":""}"><strong>Must-haves:</strong> ${dm.mustMatched}/${dm.mustTotal} (${dm.mustScore}%)${dm.mustFlag?" ⚠":""}`;
-                if (dm.matchedMusts.length) kwHtml += `<br>${dm.matchedMusts.map(w=>`<span class="kw-match">${w}</span>`).join(" ")}`;
-                if (dm.missingMusts.length) kwHtml += `<br>${dm.missingMusts.map(w=>`<span class="kw-miss">${w}</span>`).join(" ")}`;
-                kwHtml += `</div>`;
-            }
-            if (dm.niceTotal) {
-                kwHtml += `<div class="mb-row"><strong>Nice-to-haves:</strong> ${dm.niceMatched}/${dm.niceTotal} (${dm.niceScore}%)`;
-                if (dm.matchedNices.length) kwHtml += `<br>${dm.matchedNices.map(w=>`<span class="kw-match">${w}</span>`).join(" ")}`;
-                if (dm.missingNices.length) kwHtml += `<br>${dm.missingNices.map(w=>`<span class="kw-miss">${w}</span>`).join(" ")}`;
-                kwHtml += `</div>`;
-            }
-            kwHtml += `</div>`;
+    if (dm.mustTotal || dm.niceTotal) {
+        kwHtml += `<div class="match-breakdown">`;
+        kwHtml += `<div class="mb-score">Score: <strong>${dm.score}/10</strong> (must-haves ${dm.mustScore}% × 0.7 + nice-to-haves ${dm.niceScore}% × 0.3)</div>`;
+        if (dm.mustTotal) {
+            kwHtml += `<div class="mb-row ${dm.mustFlag?"mb-flag":""}"><strong>Must-haves</strong> (${dm.matchedMusts.length} skills, weighted ${Math.round(dm.mustWeighted*100)/100}/${dm.mustMax})${dm.mustFlag?" ⚠ Below 50%":""}`;
+            kwHtml += `<div class="mb-skills">`;
+            for (const s of dm.matchedMusts) kwHtml += `<span class="kw-match">${s.skill} <small>${s.rating}/5</small></span> `;
+            kwHtml += `</div></div>`;
         }
+        if (dm.niceTotal) {
+            kwHtml += `<div class="mb-row"><strong>Nice-to-haves</strong> (${dm.matchedNices.length} skills, weighted ${Math.round(dm.niceWeighted*100)/100}/${dm.niceMax})`;
+            kwHtml += `<div class="mb-skills">`;
+            for (const s of dm.matchedNices) kwHtml += `<span class="kw-match">${s.skill} <small>${s.rating}/5</small></span> `;
+            kwHtml += `</div></div>`;
+        }
+        kwHtml += `</div>`;
     }
     document.getElementById("detail-keywords").innerHTML = kwHtml;
     document.getElementById("detail-description").textContent = j.description || "No description available.";
@@ -509,18 +559,6 @@ function saveCV() {
     const text = document.getElementById("cv-input").value.trim();
     if (!text) return;
     saveState("cv_text", text);
-    for (const j of JOBS) {
-        const jt = `${j.title} ${j.description||""} ${j.department||""}`;
-        const dm = detailedMatch(jt, text, j.description||"");
-        j._score = dm.score;
-        j._mustScore = dm.mustScore;
-        j._mustFlag = dm.mustFlag;
-        j._mustTotal = dm.mustTotal;
-        j._mustMatched = dm.mustMatched;
-        j._niceScore = dm.niceScore;
-        j._niceTotal = dm.niceTotal;
-        j._niceMatched = dm.niceMatched;
-    }
     document.getElementById("cv-banner").style.display = "none";
     renderCV();
     alert(`CV saved (${text.length} characters). Match scores updated.`);
