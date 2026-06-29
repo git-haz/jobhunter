@@ -16,7 +16,7 @@
         <ul>
             <li><a href="#" onclick="showView('feed')" class="nav-link active" data-view="feed">Feed</a></li>
             <li><a href="#" onclick="showView('tracker')" class="nav-link" data-view="tracker">Tracker</a></li>
-            <li><a href="#" onclick="showView('cv')" class="nav-link" data-view="cv">CV</a></li>
+            <li><a href="#" onclick="showView('scorecard')" class="nav-link" data-view="scorecard">Scorecard</a></li>
         </ul>
     </nav>
 
@@ -25,8 +25,8 @@
     <main class="container">
         <!-- CV Banner -->
         <div class="cv-banner" id="cv-banner" style="display:none">
-            <span>Upload your CV to get match scores for every job.</span>
-            <a href="#" onclick="showView('cv')" role="button" class="outline small">Upload CV</a>
+            <span>Add your skills scorecard to get match scores for every job.</span>
+            <a href="#" onclick="showView('scorecard')" role="button" class="outline small">Add Scorecard</a>
         </div>
 
         <!-- FEED VIEW -->
@@ -125,15 +125,37 @@
             <div class="kanban-board" id="kanban"></div>
         </div>
 
-        <!-- CV VIEW -->
-        <div id="view-cv" style="display:none">
-            <h2>Your CV</h2>
-            <p>Paste your CV text to get match scores against job descriptions. All processing is local — nothing is sent to any server.</p>
-            <div id="cv-current"></div>
+        <!-- SCORECARD VIEW -->
+        <div id="view-scorecard" style="display:none">
+            <h2>Skills Scorecard</h2>
+            <p>Your scorecard is matched against job descriptions. Only explicit skill mentions count. All processing is local.</p>
+
+            <div id="sc-current"></div>
+
             <article>
-                <h4>Add / Replace CV</h4>
-                <label>CV Text <textarea id="cv-input" rows="12" placeholder="Paste your CV content here..."></textarea></label>
-                <button onclick="saveCV()">Save CV</button>
+                <h4>Paste Scorecard</h4>
+                <p style="font-size:0.85rem;opacity:0.7">Paste a table with columns: Category, Skill, Rating (1-5). Supports tab/pipe/comma separated, or Markdown tables.</p>
+                <textarea id="sc-paste" rows="8" placeholder="Product Strategy | Product strategy | 4
+Product Strategy | Roadmap ownership | 5
+Technical Skills | SQL | 3
+..."></textarea>
+                <button onclick="importScorecard()">Import</button>
+            </article>
+
+            <article>
+                <h4>Build Scorecard</h4>
+                <div id="sc-editor">
+                    <div class="sc-row sc-header">
+                        <span>Category</span><span>Skill</span><span>Rating</span><span></span>
+                    </div>
+                    <div id="sc-rows"></div>
+                </div>
+                <button class="outline" onclick="addScorecardRow()">+ Add Row</button>
+                <button onclick="saveEditorScorecard()">Save Scorecard</button>
+            </article>
+
+            <article>
+                <button class="outline secondary" onclick="clearScorecard()">Remove Scorecard</button>
             </article>
         </div>
     </main>

@@ -1,6 +1,7 @@
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.1.0";
 const VERSION_HISTORY = [
-    {v:"1.0.0",d:"2026-06-29",c:["Scorecard-based matching: skills weighted by your PM skills ratings (1-5)","Must-haves weighted 70%, nice-to-haves 30%","Red flag when must-have weighted score below 50%","Click job cards to open full detail view","Detail modal shows scorecard breakdown per skill with rating"]},
+    {v:"1.1.0",d:"2026-06-29",c:["User-managed scorecard (upload, paste, or build manually)","Matching only on explicit skill mentions in job descriptions","No CV or inference — scorecard is the sole source of truth","Scorecard editor with category/skill/rating rows","Import from Markdown tables, tab/pipe/comma separated text"]},
+    {v:"1.0.0",d:"2026-06-29",c:["Scorecard-based matching: skills weighted by PM skills ratings (1-5)","Must-haves weighted 70%, nice-to-haves 30%","Click job cards to open full detail view"]},
     {v:"0.9.3",d:"2026-06-27",c:["Job title multi-select with typeahead from cleaned seed titles","Title cleaning: strips gender markers, company names, seniority prefixes","Custom title entry via Enter key"]},
     {v:"0.9.2",d:"2026-06-27",c:["Search criteria expanded to all of Germany","Retrieved date filter and display","232 jobs seeded from 82 sources"]},
     {v:"0.9.0",d:"2026-06-27",c:["Must-have vs nice-to-have requirement detection","Red flag on jobs with <50% must-have match","Hybrid section + inline cue classification (EN/DE)","Match breakdown in detail modal"]},
@@ -23,46 +24,11 @@ function loadState(key, def) { try { return JSON.parse(localStorage.getItem("jh_
 function saveState(key, val) { localStorage.setItem("jh_"+key, JSON.stringify(val)); }
 function getUserJobs() { return loadState("user_jobs", {}); }
 function setUserJob(url, data) { const uj = getUserJobs(); uj[url] = {...(uj[url]||{}), ...data}; saveState("user_jobs", uj); }
-function getCV() { return loadState("cv_text", ""); }
+function getScorecard() { return loadState("scorecard", []); }
+function saveScorecard(sc) { saveState("scorecard", sc); }
+function hasScorecard() { return getScorecard().length > 0; }
 
-// --- SCORECARD-BASED MATCHING ---
-const SCORECARD = {
-    "product strategy":4, "roadmap":5, "roadmap ownership":5, "prioritisation":4, "prioritization":4,
-    "business case":3, "business case development":3,
-    "api":5, "api design":5, "platform architecture":5, "integrations":5, "integration":5,
-    "data modelling":4, "data modeling":4, "sql":3,
-    "cloud":2, "etl":2, "pipelines":2, "pipeline":2,
-    "technical documentation":4,
-    "workflow optimisation":5, "workflow optimization":5, "process optimization":5,
-    "discovery":4, "structured discovery":4, "user research":4,
-    "experimentation":2, "ab testing":2, "a/b testing":2,
-    "kpi":3, "kpi ownership":3, "metrics":3,
-    "cross functional":5, "cross-functional":5, "cross functional leadership":5,
-    "stakeholder management":5, "stakeholder":5,
-    "leading without authority":5, "influence":5,
-    "people management":1, "team management":1, "direct reports":1, "line management":1,
-    "mentoring":3, "coaching":3,
-    "agile":5, "scrum":5, "kanban":5,
-    "backlog":5, "backlog ownership":5,
-    "release planning":4, "release management":4,
-    "cross team coordination":5, "cross-team":5,
-    "airline":5, "airline it":5, "aviation":5, "iata":5, "ndc":5, "pss":5, "gds":5, "amadeus":5,
-    "traveltech":5, "travel tech":5, "travel":5, "booking":5, "reservation":5,
-    "insurtech":4, "insurance":4,
-    "fintech":3, "finance":3, "banking":3,
-    "ecommerce":3, "e-commerce":3, "e commerce":3,
-    "crm":2, "salesforce":2, "marketing automation":2,
-    "translating complexity":5, "simplifying complexity":5,
-    "executive communication":4, "c-level":4, "board level":4,
-    "requirements elicitation":5, "requirements":5, "specification":5,
-    "cross market":5, "cross-market":5, "international":5, "multilingual":5, "multicultural":5,
-    "product management":5, "product manager":5, "product owner":5,
-    "jira":5, "confluence":5, "figma":4,
-    "saas":4, "b2b":4, "b2c":3, "enterprise":4, "startup":4,
-    "gdpr":4, "compliance":4, "data protection":4,
-    "german":5, "english":5, "bilingual":5,
-    "okr":4, "strategy":4, "leadership":5, "roadmapping":5,
-};
+// --- SCORECARD-BASED MATCHING (explicit mentions only) ---
 
 const MUST_HEADERS = /(?:must.?have|required|requirements|what you.?(?:ll )?need|what we.?(?:re )?looking for|you bring|qualifications|essential|anforderungen|voraussetzungen|was du mitbringst|das bringst du mit|dein profil|ihr profil|what you.?(?:ll )?bring|your profile|key requirements)/i;
 const NICE_HEADERS = /(?:nice.?to.?have|bonus|preferred|desirable|optional|ideally|additional|plus|advantageous|beneficial|w[üu]nschenswert|von vorteil|idealerweise|zus[äa]tzlich|what.?s a plus|it.?s a bonus|extra points|good to have)/i;
@@ -89,47 +55,49 @@ function classifyRequirements(desc) {
     return { mustText: ml.join(" "), niceText: nl.join(" ") };
 }
 
-function findScorecardMatches(text) {
+function findScorecardMatches(text, scorecard) {
+    if (!text || !scorecard.length) return [];
     const lower = text.toLowerCase().replace(/<[^>]+>/g, " ");
     const found = [];
-    const sorted = Object.entries(SCORECARD).sort((a, b) => b[0].length - a[0].length);
+    const sorted = [...scorecard].sort((a, b) => b.skill.length - a.skill.length);
     const used = new Set();
-    for (const [skill, rating] of sorted) {
-        if (lower.includes(skill) && !used.has(skill)) {
-            used.add(skill);
-            found.push({ skill, rating, weight: rating / 5 });
+    for (const entry of sorted) {
+        const sk = entry.skill.toLowerCase();
+        if (sk && lower.includes(sk) && !used.has(sk)) {
+            used.add(sk);
+            found.push({ skill: entry.skill, category: entry.category || "", rating: entry.rating, weight: entry.rating / 5 });
         }
     }
     return found;
 }
 
-function detailedMatch(jobText, cvText, description) {
+function detailedMatch(description) {
+    const sc = getScorecard();
     const result = {
         score: 0, mustScore: 0, niceScore: 0,
         mustTotal: 0, mustWeighted: 0, mustMax: 0,
         niceTotal: 0, niceWeighted: 0, niceMax: 0,
         mustFlag: false,
-        matchedMusts: [], missingMusts: [], matchedNices: [], missingNices: [],
+        matchedMusts: [], matchedNices: [],
     };
-    if (!description && !jobText) return result;
+    if (!description || !sc.length) return result;
 
-    const { mustText, niceText } = classifyRequirements(description || jobText);
-    const mustSkills = findScorecardMatches(mustText);
-    const niceSkills = findScorecardMatches(niceText);
+    const { mustText, niceText } = classifyRequirements(description);
+    const mustSkills = findScorecardMatches(mustText, sc);
+    const niceSkills = findScorecardMatches(niceText, sc);
 
     result.mustTotal = mustSkills.length;
     result.niceTotal = niceSkills.length;
+    result.mustMax = mustSkills.length;
+    result.niceMax = niceSkills.length;
 
     for (const s of mustSkills) {
-        result.mustMax++;
         result.mustWeighted += s.weight;
-        result.matchedMusts.push({ skill: s.skill, rating: s.rating });
+        result.matchedMusts.push(s);
     }
-
     for (const s of niceSkills) {
-        result.niceMax++;
         result.niceWeighted += s.weight;
-        result.matchedNices.push({ skill: s.skill, rating: s.rating });
+        result.matchedNices.push(s);
     }
 
     if (result.mustMax) result.mustScore = Math.round((result.mustWeighted / result.mustMax) * 100);
@@ -138,19 +106,22 @@ function detailedMatch(jobText, cvText, description) {
     const mustRatio = result.mustMax ? result.mustWeighted / result.mustMax : 0;
     const niceRatio = result.niceMax ? result.niceWeighted / result.niceMax : 0;
     result.score = Math.min(Math.round((mustRatio * 0.7 + niceRatio * 0.3) * 10), 10);
-
     result.mustFlag = result.mustTotal > 0 && result.mustScore < 50;
-
-    // Find skills mentioned in job but NOT in scorecard (unmatched)
-    const allText = (mustText + " " + niceText).toLowerCase();
-    const allMatched = new Set([...mustSkills, ...niceSkills].map(s => s.skill));
-    // Not tracking unmatched for now — the scorecard is the source of truth
 
     return result;
 }
 
-function matchScore(jobText, cvText, description) {
-    return detailedMatch(jobText, cvText, description).score;
+function recomputeScores() {
+    for (const j of JOBS) {
+        const dm = detailedMatch(j.description || "");
+        j._score = dm.score;
+        j._dm = dm;
+        j._mustScore = dm.mustScore;
+        j._mustFlag = dm.mustFlag;
+        j._mustTotal = dm.mustTotal;
+        j._niceScore = dm.niceScore;
+        j._niceTotal = dm.niceTotal;
+    }
 }
 
 // --- SECTOR ---
@@ -179,20 +150,9 @@ async function init() {
 
     document.getElementById("seed-info").innerHTML = `<small>Data seeded: <strong>${data.seeded_at?.slice(0,16).replace("T"," ")||"?"} UTC</strong> · ${data.total_jobs} jobs from ${data.sources_queried} sources</small>`;
 
-    for (const j of JOBS) {
-        const jt = `${j.title} ${j.description||""} ${j.department||""}`;
-        const dm = detailedMatch(jt, "", j.description||"");
-        j._score = dm.score;
-        j._dm = dm;
-        j._mustScore = dm.mustScore;
-        j._mustFlag = dm.mustFlag;
-        j._mustTotal = dm.mustTotal;
-        j._niceScore = dm.niceScore;
-        j._niceTotal = dm.niceTotal;
-    }
+    recomputeScores();
     buildTitleOptions();
-    document.getElementById("cv-banner").style.display = cv ? "none" : "flex";
-    if (cv) { document.getElementById("cv-current").innerHTML = `<article><p><strong>CV loaded</strong> (${cv.length} chars) · <a href="#" onclick="clearCV()">Remove</a></p></article>`; }
+    document.getElementById("cv-banner").style.display = hasScorecard() ? "none" : "flex";
 
     initTitleFilter();
     applyFilters();
@@ -205,12 +165,12 @@ function buildStatusSelect(sel) {
 
 // --- VIEWS ---
 function showView(name) {
-    ["feed","tracker","cv"].forEach(v => {
+    ["feed","tracker","scorecard"].forEach(v => {
         document.getElementById("view-"+v).style.display = v===name?"":"none";
         document.querySelector(`.nav-link[data-view="${v}"]`).classList.toggle("active", v===name);
     });
     if (name === "tracker") renderKanban();
-    if (name === "cv") renderCV();
+    if (name === "scorecard") renderScorecard();
 }
 
 // --- TITLE CLEANING ---
@@ -503,7 +463,7 @@ function openDetail(idx) {
     if (j._score) { const cls = j._score>=8?"high":j._score>=5?"mid":"low"; meta += ` · <span class="match-badge match-${cls}">${j._score}/10</span>`; }
     document.getElementById("detail-meta").innerHTML = meta;
 
-    const dm = j._dm || detailedMatch(`${j.title} ${j.description||""} ${j.department||""}`, "", j.description||"");
+    const dm = j._dm || detailedMatch(j.description || "");
     let kwHtml = "";
     if (dm.mustTotal || dm.niceTotal) {
         kwHtml += `<div class="match-breakdown">`;
@@ -573,31 +533,94 @@ function renderKanban() {
     document.getElementById("kanban").innerHTML = html;
 }
 
-// --- CV ---
-function renderCV() {
-    const cv = getCV();
-    if (cv) {
-        document.getElementById("cv-current").innerHTML = `<article><header><h4>Current CV</h4></header><p><strong>Length:</strong> ${cv.length} chars · <a href="#" onclick="clearCV(); return false;">Remove</a></p><details><summary>Preview</summary><pre class="cv-preview">${esc(cv.slice(0,3000))}${cv.length>3000?"...":""}</pre></details></article>`;
-        document.getElementById("cv-input").value = "";
+// --- SCORECARD ---
+function renderScorecard() {
+    const sc = getScorecard();
+    const el = document.getElementById("sc-current");
+    if (sc.length) {
+        const cats = {};
+        for (const s of sc) { const c = s.category || "Other"; if (!cats[c]) cats[c] = []; cats[c].push(s); }
+        let html = `<article><header><h4>Current Scorecard (${sc.length} skills)</h4></header><div class="overflow-auto"><table role="grid"><thead><tr><th>Category</th><th>Skill</th><th>Rating</th></tr></thead><tbody>`;
+        for (const [cat, skills] of Object.entries(cats).sort()) {
+            for (const s of skills) html += `<tr><td>${esc(cat)}</td><td>${esc(s.skill)}</td><td>${"★".repeat(s.rating)}${"☆".repeat(5-s.rating)}</td></tr>`;
+        }
+        html += `</tbody></table></div></article>`;
+        el.innerHTML = html;
+
+        // Pre-populate editor
+        const rows = document.getElementById("sc-rows");
+        rows.innerHTML = "";
+        for (const s of sc) addScorecardRow(s.category, s.skill, s.rating);
     } else {
-        document.getElementById("cv-current").innerHTML = "";
+        el.innerHTML = "";
+        document.getElementById("sc-rows").innerHTML = "";
+        addScorecardRow(); addScorecardRow(); addScorecardRow();
     }
 }
 
-function saveCV() {
-    const text = document.getElementById("cv-input").value.trim();
-    if (!text) return;
-    saveState("cv_text", text);
-    document.getElementById("cv-banner").style.display = "none";
-    renderCV();
-    alert(`CV saved (${text.length} characters). Match scores updated.`);
+function addScorecardRow(cat, skill, rating) {
+    const rows = document.getElementById("sc-rows");
+    const row = document.createElement("div");
+    row.className = "sc-row";
+    row.innerHTML = `<input type="text" placeholder="Category" value="${esc(cat||"")}"><input type="text" placeholder="Skill name" value="${esc(skill||"")}"><select>${[1,2,3,4,5].map(n=>`<option value="${n}" ${n===(rating||3)?"selected":""}>${n}</option>`).join("")}</select><button class="outline small" onclick="this.parentElement.remove()">✕</button>`;
+    rows.appendChild(row);
 }
 
-function clearCV() {
-    localStorage.removeItem("jh_cv_text");
-    for (const j of JOBS) j._score = 0;
+function saveEditorScorecard() {
+    const rows = document.querySelectorAll("#sc-rows .sc-row");
+    const sc = [];
+    for (const row of rows) {
+        const inputs = row.querySelectorAll("input");
+        const sel = row.querySelector("select");
+        const cat = inputs[0].value.trim();
+        const skill = inputs[1].value.trim();
+        const rating = parseInt(sel.value) || 3;
+        if (skill) sc.push({ category: cat, skill, rating });
+    }
+    if (!sc.length) { alert("Add at least one skill."); return; }
+    saveScorecard(sc);
+    recomputeScores();
+    document.getElementById("cv-banner").style.display = "none";
+    renderScorecard();
+    alert(`Scorecard saved with ${sc.length} skills. Match scores updated.`);
+}
+
+function importScorecard() {
+    const raw = document.getElementById("sc-paste").value.trim();
+    if (!raw) return;
+    const sc = [];
+    const lines = raw.split("\n");
+    for (const line of lines) {
+        const clean = line.replace(/^\||\|$/g, "").trim();
+        if (!clean || /^[-:|\s]+$/.test(clean) || /category/i.test(clean) && /skill/i.test(clean)) continue;
+        const parts = clean.split(/[|\t]/).map(p => p.trim()).filter(Boolean);
+        if (parts.length >= 3) {
+            const rating = parseInt(parts[parts.length - 1]);
+            if (rating >= 1 && rating <= 5) {
+                sc.push({ category: parts[0], skill: parts[1], rating });
+            }
+        } else if (parts.length === 2) {
+            const rating = parseInt(parts[1]);
+            if (rating >= 1 && rating <= 5) {
+                sc.push({ category: "", skill: parts[0], rating });
+            }
+        }
+    }
+    if (!sc.length) { alert("Could not parse any skills. Use format: Category | Skill | Rating"); return; }
+    saveScorecard(sc);
+    recomputeScores();
+    document.getElementById("cv-banner").style.display = "none";
+    document.getElementById("sc-paste").value = "";
+    renderScorecard();
+    alert(`Imported ${sc.length} skills. Match scores updated.`);
+}
+
+function clearScorecard() {
+    localStorage.removeItem("jh_scorecard");
+    for (const j of JOBS) { j._score = 0; j._dm = null; j._mustScore = 0; j._mustFlag = false; j._mustTotal = 0; j._niceScore = 0; j._niceTotal = 0; }
     document.getElementById("cv-banner").style.display = "flex";
-    document.getElementById("cv-current").innerHTML = "";
+    renderScorecard();
+    applyFilters();
 }
 
 // --- CSV EXPORT ---

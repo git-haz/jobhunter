@@ -108,7 +108,11 @@
 .job-card-body:hover { background: rgba(0,0,0,0.02); border-radius: 6px; }
 .kw-match { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 8px; background: #c8e6c9; color: #2e7d32; font-size: 0.78rem; margin: 0.1rem; }
 .kw-miss { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 8px; background: #ffcdd2; color: #c62828; font-size: 0.78rem; margin: 0.1rem; }
-.cv-preview { max-height: 300px; overflow-y: auto; font-size: 0.8rem; white-space: pre-wrap; word-break: break-word; opacity: 0.8; }
+.sc-row { display: grid; grid-template-columns: 1fr 1.5fr 70px 40px; gap: 0.4rem; margin-bottom: 0.3rem; align-items: center; }
+.sc-row input, .sc-row select { margin: 0; padding: 0.3rem 0.5rem; font-size: 0.85rem; height: auto; }
+.sc-row button { padding: 0.2rem 0.4rem; margin: 0; }
+.sc-header { font-weight: bold; font-size: 0.8rem; opacity: 0.6; }
+.sc-header span { padding: 0.3rem 0.5rem; }
 .version-entry h4 { margin-bottom: 0.25rem; }
 .version-entry h4 small { opacity: 0.6; font-weight: normal; }
 .version-entry ul { margin-top: 0; margin-bottom: 1rem; }
