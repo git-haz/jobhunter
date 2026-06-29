@@ -43,7 +43,18 @@
 .tag-dept { background: #f3e5f5; color: #7b1fa2; }
 .tag-seniority { background: #fce4ec; color: #c62828; }
 .tag-salary { background: #e0f2f1; color: #00695c; font-weight: bold; }
-.job-description { font-size: 0.85rem; opacity: 0.65; margin: 0 0 0.4rem 0; line-height: 1.45; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.job-description { font-size: 0.85rem; opacity: 0.65; margin: 0 0 0.4rem 0; line-height: 1.45; overflow: hidden; max-height: 4.5em; }
+.job-description p { margin: 0 0 0.3rem 0; }
+.job-description ul, .job-description ol { margin: 0.2rem 0; padding-left: 1.2rem; }
+.job-description li { margin-bottom: 0.1rem; }
+.job-description h2, .job-description h3, .job-description h4 { font-size: 0.9rem; margin: 0.3rem 0 0.1rem; }
+
+.detail-desc-text { font-size: 0.88rem; max-height: 500px; overflow-y: auto; line-height: 1.6; }
+.detail-desc-text p { margin: 0 0 0.6rem 0; }
+.detail-desc-text ul, .detail-desc-text ol { margin: 0.4rem 0; padding-left: 1.5rem; }
+.detail-desc-text li { margin-bottom: 0.3rem; }
+.detail-desc-text h2, .detail-desc-text h3, .detail-desc-text h4 { margin: 0.8rem 0 0.3rem; }
+.detail-desc-text a { color: var(--pico-primary); }
 .job-footer { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
 .job-date { opacity: 0.5; font-size: 0.8rem; }
 .job-actions { display: flex; flex-direction: column; gap: 0.3rem; flex-shrink: 0; }

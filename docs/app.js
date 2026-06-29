@@ -417,7 +417,7 @@ function renderJobs(jobs) {
                         ${j.seniority?`<span class="tag tag-seniority">${esc(j.seniority)}</span>`:""}
                         ${j.salary_text?`<span class="tag tag-salary">${esc(j.salary_text)}</span>`:""}
                     </div>
-                    ${j.description?`<p class="job-description">${esc((j.description||"").slice(0,250))}${(j.description||"").length>250?"...":""}</p>`:""}
+                    ${j.description?`<div class="job-description">${sanitizeHtml((j.description||"").slice(0,500))}</div>`:""}
                     <div class="job-footer">
                         <small class="job-date" title="Retrieved: ${(j.retrieved_at||"").slice(0,16).replace("T"," ")}">${(j.retrieved_at||j.first_seen||"").slice(0,10)}</small>
                         ${score?`<span class="match-badge match-${score>=8?"high":score>=5?"mid":"low"}">${score}/10</span>`:""}
@@ -439,6 +439,35 @@ function renderJobs(jobs) {
 }
 
 function esc(s) { if (!s) return ""; const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+function sanitizeHtml(raw) {
+    if (!raw) return "";
+    const ALLOWED = new Set(["p","ul","ol","li","strong","em","b","i","br","h2","h3","h4","span","a","div"]);
+    const tmp = document.createElement("div");
+    tmp.innerHTML = raw;
+    function clean(node) {
+        const children = Array.from(node.childNodes);
+        for (const child of children) {
+            if (child.nodeType === 3) continue;
+            if (child.nodeType !== 1) { child.remove(); continue; }
+            const tag = child.tagName.toLowerCase();
+            if (!ALLOWED.has(tag)) {
+                while (child.firstChild) child.parentNode.insertBefore(child.firstChild, child);
+                child.remove();
+                continue;
+            }
+            const attrs = Array.from(child.attributes);
+            for (const attr of attrs) {
+                if (tag === "a" && attr.name === "href" && (attr.value.startsWith("http") || attr.value.startsWith("/"))) continue;
+                child.removeAttribute(attr.name);
+            }
+            if (tag === "a") { child.setAttribute("target", "_blank"); child.setAttribute("rel", "noopener"); }
+            clean(child);
+        }
+    }
+    clean(tmp);
+    return tmp.innerHTML;
+}
 
 // --- JOB ACTIONS ---
 function toggleFav(url) {
@@ -494,7 +523,7 @@ function openDetail(idx) {
         kwHtml += `</div>`;
     }
     document.getElementById("detail-keywords").innerHTML = kwHtml;
-    document.getElementById("detail-description").textContent = j.description || "No description available.";
+    document.getElementById("detail-description").innerHTML = sanitizeHtml(j.description) || "No description available.";
     document.getElementById("detail-modal").showModal();
 }
 
