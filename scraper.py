@@ -1027,6 +1027,111 @@ def scrape_jobs_4dayweek(plugin_config, scrape_filters=None):
     return apply_scrape_filters(jobs, scrape_filters)
 
 
+# ---------------------------------------------------------------------------
+# Workable public API scraper
+# ---------------------------------------------------------------------------
+
+def scrape_jobs_workable(plugin_config, scrape_filters=None):
+    slug = plugin_config.get("workable_slug", "")
+    api_url = f"https://apply.workable.com/api/v3/accounts/{slug}/jobs"
+    headers = {
+        **HEADERS,
+        "Referer": f"https://apply.workable.com/{slug}/",
+        "Origin": "https://apply.workable.com",
+        "Content-Type": "application/json",
+    }
+    payload = {"query": "", "location": [], "department": []}
+    resp = requests.post(api_url, json=payload, headers=headers, timeout=30)
+    resp.raise_for_status()
+    data = resp.json()
+
+    all_jobs = []
+    for r in data.get("results", []):
+        shortcode = r.get("shortcode", "")
+        city = r.get("city", "")
+        country = r.get("country", "")
+        location = ", ".join(filter(None, [city, country]))
+        remote = r.get("remote", False)
+        work_mode = "remote" if remote else classify_text(location, WORK_MODE_KEYWORDS)
+
+        job = {
+            "external_id": r.get("id", shortcode),
+            "title": r.get("title", ""),
+            "url": f"https://apply.workable.com/{slug}/j/{shortcode}/",
+            "location": location,
+            "department": r.get("department", ""),
+            "work_mode": work_mode,
+            "employment_type": classify_text(r.get("employment_type", ""), EMPLOYMENT_TYPE_KEYWORDS),
+            "seniority": classify_text(r.get("title", ""), SENIORITY_KEYWORDS),
+            "salary_text": "",
+            "description": "",
+        }
+        all_jobs.append(job)
+
+    return apply_scrape_filters(all_jobs, scrape_filters)
+
+
+# ---------------------------------------------------------------------------
+# career.aero HTML scraper (Interpersonal platform — used by Condor etc.)
+# ---------------------------------------------------------------------------
+
+def scrape_jobs_career_aero(plugin_config, scrape_filters=None):
+    slug = plugin_config.get("career_aero_slug", "")
+    base = plugin_config.get("base_url", "https://www.career.aero").rstrip("/")
+    list_url = f"{base}/{slug}/en/job/list"
+
+    try:
+        resp = requests.get(list_url, headers=HEADERS, timeout=30)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+    except Exception:
+        return []
+
+    jobs = []
+    seen = set()
+
+    for a in soup.find_all("a", href=True):
+        href = a.get("href", "")
+        if f"/{slug}/en/job/show/" not in href and f"/{slug}/de/job/show/" not in href:
+            continue
+        job_url = urljoin(base, href) if href.startswith("/") else href
+        if job_url in seen:
+            continue
+        seen.add(job_url)
+
+        title_el = a.find("h5") or a.find("h4") or a.find("h3")
+        title = title_el.get_text(strip=True) if title_el else a.get_text(strip=True)
+        title = title.strip()
+        if not title:
+            continue
+
+        parent = a.find_parent(["div", "li", "article", "section"])
+        location = ""
+        if parent:
+            for span in parent.find_all(["span", "p", "div"]):
+                t = span.get_text(strip=True)
+                if t and t != title and 2 < len(t) < 60 and t.lower() not in ("apply", "mehr"):
+                    location = t
+                    break
+
+        ext_id = href.rstrip("/").split("/")[-1]
+
+        jobs.append({
+            "external_id": ext_id,
+            "title": title,
+            "url": job_url,
+            "location": location,
+            "department": "",
+            "work_mode": classify_text(location + " " + title, WORK_MODE_KEYWORDS),
+            "employment_type": classify_text(title, EMPLOYMENT_TYPE_KEYWORDS),
+            "seniority": classify_text(title, SENIORITY_KEYWORDS),
+            "salary_text": "",
+            "description": title,
+        })
+
+    return apply_scrape_filters(jobs, scrape_filters)
+
+
 PLATFORM_SCRAPERS = {
     "teamtailor": scrape_jobs_html,
     "personio": scrape_jobs_html,
@@ -1041,6 +1146,8 @@ PLATFORM_SCRAPERS = {
     "kimeta": scrape_jobs_kimeta,
     "arbeitsagentur": scrape_jobs_arbeitsagentur,
     "fourday": scrape_jobs_4dayweek,
+    "workable": scrape_jobs_workable,
+    "career_aero": scrape_jobs_career_aero,
 }
 
 

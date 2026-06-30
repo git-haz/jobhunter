@@ -1,0 +1,7 @@
+name: Eurowings Digital
+platform: personio
+base_url: https://eurowings-digital.jobs.personio.com
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

@@ -1,0 +1,8 @@
+name: Ryanair
+platform: workable
+base_url: https://apply.workable.com
+workable_slug: ryanair
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

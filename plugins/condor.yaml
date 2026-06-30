@@ -1,0 +1,8 @@
+name: Condor
+platform: career_aero
+base_url: https://www.career.aero
+career_aero_slug: condor
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

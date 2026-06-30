@@ -1,0 +1,9 @@
+name: Amadeus IT
+platform: workday
+base_url: https://amadeus.wd502.myworkdayjobs.com
+workday_company: amadeus
+workday_board: jobs
+filters:
+  keywords: [product]
+  exclude_keywords: []
+  location: []

@@ -1,5 +1,6 @@
-const APP_VERSION = "1.1.0";
+const APP_VERSION = "1.2.0";
 const VERSION_HISTORY = [
+    {v:"1.2.0",d:"2026-06-30",c:["6 new airline & travel-tech sources: Amadeus, GetYourGuide, Trivago, Ryanair, Eurowings Digital, Condor","New Workable platform scraper (reusable for any Workable-hosted board)","New career.aero HTML scraper (Interpersonal platform)","277+ jobs seeded, deduplicated by URL"]},
     {v:"1.1.0",d:"2026-06-29",c:["User-managed scorecard (upload, paste, or build manually)","Matching only on explicit skill mentions in job descriptions","No CV or inference — scorecard is the sole source of truth","Scorecard editor with category/skill/rating rows","Import from Markdown tables, tab/pipe/comma separated text"]},
     {v:"1.0.0",d:"2026-06-29",c:["Scorecard-based matching: skills weighted by PM skills ratings (1-5)","Must-haves weighted 70%, nice-to-haves 30%","Click job cards to open full detail view"]},
     {v:"0.9.3",d:"2026-06-27",c:["Job title multi-select with typeahead from cleaned seed titles","Title cleaning: strips gender markers, company names, seniority prefixes","Custom title entry via Enter key"]},
