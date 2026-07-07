@@ -1,5 +1,6 @@
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.3.0";
 const VERSION_HISTORY = [
+    {v:"1.3.0",d:"2026-07-07",c:["3 separate match scores: Domain %, Must-have %, Nice-to-have %","Bilingual detection: flags jobs requiring German + English","Domain-based tabs from scorecard categories (Unknown for unclassified)","Expandable match breakdown on every job card","Filters for each score dimension and bilingual yes/no"]},
     {v:"1.2.0",d:"2026-06-30",c:["6 new airline & travel-tech sources: Amadeus, GetYourGuide, Trivago, Ryanair, Eurowings Digital, Condor","New Workable platform scraper (reusable for any Workable-hosted board)","New career.aero HTML scraper (Interpersonal platform)","277+ jobs seeded, deduplicated by URL"]},
     {v:"1.1.0",d:"2026-06-29",c:["User-managed scorecard (upload, paste, or build manually)","Matching only on explicit skill mentions in job descriptions","No CV or inference — scorecard is the sole source of truth","Scorecard editor with category/skill/rating rows","Import from Markdown tables, tab/pipe/comma separated text"]},
     {v:"1.0.0",d:"2026-06-29",c:["Scorecard-based matching: skills weighted by PM skills ratings (1-5)","Must-haves weighted 70%, nice-to-haves 30%","Click job cards to open full detail view"]},
@@ -29,12 +30,13 @@ function getScorecard() { return loadState("scorecard", []); }
 function saveScorecard(sc) { saveState("scorecard", sc); }
 function hasScorecard() { return getScorecard().length > 0; }
 
-// --- SCORECARD-BASED MATCHING (explicit mentions only) ---
+// --- MATCHING ---
 
 const MUST_HEADERS = /(?:must.?have|required|requirements|what you.?(?:ll )?need|what we.?(?:re )?looking for|you bring|qualifications|essential|anforderungen|voraussetzungen|was du mitbringst|das bringst du mit|dein profil|ihr profil|what you.?(?:ll )?bring|your profile|key requirements)/i;
 const NICE_HEADERS = /(?:nice.?to.?have|bonus|preferred|desirable|optional|ideally|additional|plus|advantageous|beneficial|w[üu]nschenswert|von vorteil|idealerweise|zus[äa]tzlich|what.?s a plus|it.?s a bonus|extra points|good to have)/i;
-const MUST_CUES = /(?:must have|required|essential|mandatory|necessary|critical|you must|we require|is required|are required|zwingend|erforderlich|notwendig)/i;
 const NICE_CUES = /(?:nice to have|bonus|preferred|ideally|preferably|desirable|a plus|an advantage|not required|optional|beneficial|von vorteil|w[üu]nschenswert|idealerweise|gerne gesehen|nicht zwingend)/i;
+const GERMAN_LANG = /\b(german|deutsch(?:e?|kenntnisse)?)\b/i;
+const ENGLISH_LANG = /\b(english|englisch(?:e?|kenntnisse)?)\b/i;
 
 function classifyRequirements(desc) {
     if (!desc) return { mustText: "", niceText: "" };
@@ -72,42 +74,73 @@ function findScorecardMatches(text, scorecard) {
     return found;
 }
 
+// Domain score: weighted fraction of scorecard domains that have at least one skill mentioned in the full description.
+// Weight per domain = average(rating/5) across that domain's skills.
+function computeDomainMatch(fullText, scorecard) {
+    const lower = (fullText || "").toLowerCase().replace(/<[^>]+>/g, " ");
+    const domainMap = {};
+    for (const entry of scorecard) {
+        const cat = entry.category || "Other";
+        if (!domainMap[cat]) domainMap[cat] = [];
+        domainMap[cat].push(entry);
+    }
+    let totalWeight = 0, matchedWeight = 0;
+    const matchedDomains = [];
+    for (const [name, skills] of Object.entries(domainMap)) {
+        const avgW = skills.reduce((s, e) => s + e.rating / 5, 0) / skills.length;
+        totalWeight += avgW;
+        const sorted = [...skills].sort((a, b) => b.skill.length - a.skill.length);
+        const matched = [];
+        const used = new Set();
+        for (const e of sorted) {
+            const sk = e.skill.toLowerCase();
+            if (sk && lower.includes(sk) && !used.has(sk)) { used.add(sk); matched.push(e); }
+        }
+        if (matched.length) {
+            matchedWeight += avgW;
+            matchedDomains.push({ name, skills: matched });
+        }
+    }
+    const score = totalWeight > 0 ? Math.round(matchedWeight / totalWeight * 100) : 0;
+    return { score, matchedDomains };
+}
+
 function detailedMatch(description) {
     const sc = getScorecard();
     const result = {
-        score: 0, mustScore: 0, niceScore: 0,
-        mustTotal: 0, mustWeighted: 0, mustMax: 0,
-        niceTotal: 0, niceWeighted: 0, niceMax: 0,
-        mustFlag: false,
+        domainScore: 0, mustScore: 0, niceScore: 0,
+        mustTotal: 0, niceTotal: 0,
+        matchedDomains: [],
         matchedMusts: [], matchedNices: [],
+        missingSkills: [],
+        bilingual: false,
     };
+    const plain = (description || "").replace(/<[^>]+>/g, " ");
+    result.bilingual = GERMAN_LANG.test(plain) && ENGLISH_LANG.test(plain);
     if (!description || !sc.length) return result;
 
     const { mustText, niceText } = classifyRequirements(description);
+    const { score: domScore, matchedDomains } = computeDomainMatch(description, sc);
+    result.domainScore = domScore;
+    result.matchedDomains = matchedDomains;
+
     const mustSkills = findScorecardMatches(mustText, sc);
     const niceSkills = findScorecardMatches(niceText, sc);
-
+    result.matchedMusts = mustSkills;
+    result.matchedNices = niceSkills;
     result.mustTotal = mustSkills.length;
     result.niceTotal = niceSkills.length;
-    result.mustMax = mustSkills.length;
-    result.niceMax = niceSkills.length;
 
-    for (const s of mustSkills) {
-        result.mustWeighted += s.weight;
-        result.matchedMusts.push(s);
-    }
-    for (const s of niceSkills) {
-        result.niceWeighted += s.weight;
-        result.matchedNices.push(s);
-    }
+    if (mustSkills.length) result.mustScore = Math.round(mustSkills.reduce((s, x) => s + x.weight, 0) / mustSkills.length * 100);
+    if (niceSkills.length) result.niceScore = Math.round(niceSkills.reduce((s, x) => s + x.weight, 0) / niceSkills.length * 100);
 
-    if (result.mustMax) result.mustScore = Math.round((result.mustWeighted / result.mustMax) * 100);
-    if (result.niceMax) result.niceScore = Math.round((result.niceWeighted / result.niceMax) * 100);
-
-    const mustRatio = result.mustMax ? result.mustWeighted / result.mustMax : 0;
-    const niceRatio = result.niceMax ? result.niceWeighted / result.niceMax : 0;
-    result.score = Math.min(Math.round((mustRatio * 0.7 + niceRatio * 0.3) * 10), 10);
-    result.mustFlag = result.mustTotal > 0 && result.mustScore < 50;
+    // missingSkills: my scorecard skills not mentioned anywhere in this job description
+    const fullLower = (description || "").toLowerCase().replace(/<[^>]+>/g, " ");
+    const alreadyMatched = new Set([...mustSkills, ...niceSkills].map(s => s.skill.toLowerCase()));
+    result.missingSkills = sc.filter(e => {
+        const sk = e.skill.toLowerCase();
+        return sk && !alreadyMatched.has(sk) && !fullLower.includes(sk);
+    });
 
     return result;
 }
@@ -115,17 +148,15 @@ function detailedMatch(description) {
 function recomputeScores() {
     for (const j of JOBS) {
         const dm = detailedMatch(j.description || "");
-        j._score = dm.score;
         j._dm = dm;
+        j._domainScore = dm.domainScore;
         j._mustScore = dm.mustScore;
-        j._mustFlag = dm.mustFlag;
-        j._mustTotal = dm.mustTotal;
         j._niceScore = dm.niceScore;
-        j._niceTotal = dm.niceTotal;
+        j._bilingual = dm.bilingual;
     }
 }
 
-// --- SECTOR ---
+// --- SECTOR (fallback when no scorecard loaded) ---
 const SECTOR_MAP = {engineering:["engineering","software","development","backend","frontend","fullstack","devops","infrastructure"],product:["product","product management"],design:["design","ux","ui","creative"],data:["data","analytics","machine learning","ai","artificial intelligence"],marketing:["marketing","growth","content","brand"],sales:["sales","business development","account","revenue"],operations:["operations","supply chain","logistics","project management"],finance:["finance","accounting","tax","treasury"],hr:["human resources","hr","people","talent","recruiting"],"legal & compliance":["legal","compliance","regulatory","risk"],customer:["customer","support","service","success","client"],it:["it","information technology","security","infosec"]};
 function getSector(dept) {
     if (!dept) return "Other";
@@ -133,6 +164,12 @@ function getSector(dept) {
     for (const [s,kws] of Object.entries(SECTOR_MAP)) { for (const k of kws) if (l.includes(k)) return s.charAt(0).toUpperCase()+s.slice(1); }
     return "Other";
 }
+
+function getJobDomains(j) {
+    return (j._dm?.matchedDomains || []).map(d => d.name);
+}
+
+function scoreCls(v) { return v >= 60 ? "high" : v >= 30 ? "mid" : "low"; }
 
 // --- FAVICON ---
 function faviconUrl(baseUrl) { try { return `https://www.google.com/s2/favicons?domain=${new URL(baseUrl).hostname}&sz=64`; } catch { return ""; } }
@@ -177,19 +214,14 @@ function showView(name) {
 // --- TITLE CLEANING ---
 function cleanTitle(raw) {
     let t = raw;
-    // Remove gender markers
     t = t.replace(/\s*\(?\s*[mwfd]\s*[\/\|]\s*[mwfd]\s*(?:[\/\|]\s*[mwfd])?\s*\)?\s*/gi, " ");
     t = t.replace(/\s*\(?\s*all\s+genders?\s*\)?\s*/gi, " ");
     t = t.replace(/\s*\(?\s*gn\s*\)?\s*/gi, " ");
     t = t.replace(/\*\s*in\b/g, "");
-    // Remove everything after separators that indicate company/location
     t = t.replace(/\s*[|@—–]\s*.{3,}$/, "");
     t = t.replace(/\s+(?:bei|at|für|for)\s+[A-Z].{2,}$/, "");
-    // Remove leading (Senior) / (Junior) etc in parens — keep the core title
     t = t.replace(/^\s*\((?:Senior|Junior|Lead|Staff|Principal|Head of)\)\s*/i, "");
-    // Remove seniority prefix for grouping
     t = t.replace(/^\s*(?:Senior|Junior|Lead|Principal|Staff|Head of|Sr\.|Jr\.)\s+/i, "");
-    // Clean up
     t = t.replace(/\s{2,}/g, " ").replace(/\s*[-–—]\s*$/, "").trim();
     return t;
 }
@@ -290,7 +322,10 @@ function applyFilters() {
     const level = document.getElementById("f-level").value;
     const dept = document.getElementById("f-dept").value.toLowerCase().trim();
     const status = document.getElementById("f-status").value;
-    const minMatch = parseInt(document.getElementById("f-match").value)||0;
+    const minDomain = parseInt(document.getElementById("f-domain").value)||0;
+    const minMust = parseInt(document.getElementById("f-must").value)||0;
+    const minNice = parseInt(document.getElementById("f-nice").value)||0;
+    const bilingualFilter = document.getElementById("f-bilingual").value;
     const excludeTerms = parseExclude(document.getElementById("f-exclude").value);
     const dateFrom = document.getElementById("f-date-from").value;
     const dateTo = document.getElementById("f-date-to").value;
@@ -307,7 +342,11 @@ function applyFilters() {
         if (dept && !(j.department||"").toLowerCase().includes(dept)) return false;
         if (status) { if (jStatus !== status) return false; }
         else { if (jStatus === "hidden") return false; }
-        if (minMatch && (j._score||0) < minMatch) return false;
+        if (minDomain && (j._domainScore||0) < minDomain) return false;
+        if (minMust && (j._mustScore||0) < minMust) return false;
+        if (minNice && (j._niceScore||0) < minNice) return false;
+        if (bilingualFilter === "yes" && !j._bilingual) return false;
+        if (bilingualFilter === "no" && j._bilingual) return false;
         if (excludeTerms.length) {
             const searchable = `${j.title} ${j.description||""} ${j.department||""}`.toLowerCase();
             if (excludeTerms.some(t => searchable.includes(t))) return false;
@@ -319,7 +358,9 @@ function applyFilters() {
 
     if (sort === "date_asc") filtered.sort((a,b) => (a.first_seen||"").localeCompare(b.first_seen||""));
     else if (sort === "company_asc") filtered.sort((a,b) => (a.source||"").localeCompare(b.source||""));
-    else if (sort === "match_desc") filtered.sort((a,b) => (b._score||0)-(a._score||0));
+    else if (sort === "domain_desc") filtered.sort((a,b) => (b._domainScore||0)-(a._domainScore||0));
+    else if (sort === "must_desc") filtered.sort((a,b) => (b._mustScore||0)-(a._mustScore||0));
+    else if (sort === "nice_desc") filtered.sort((a,b) => (b._niceScore||0)-(a._niceScore||0));
     else filtered.reverse();
 
     renderSectorTabs(filtered);
@@ -331,20 +372,38 @@ function clearFilters() {
     selectedTitles.clear();
     document.getElementById("title-chips").innerHTML = "";
     document.getElementById("title-search").value = "";
-    ["f-workmode","f-level","f-status"].forEach(id => document.getElementById(id).value = "");
-    document.getElementById("f-match").value = "0";
+    ["f-workmode","f-level","f-status","f-bilingual"].forEach(id => document.getElementById(id).value = "");
+    ["f-domain","f-must","f-nice"].forEach(id => document.getElementById(id).value = "0");
     document.getElementById("f-sort").value = "date_desc";
     applyFilters();
 }
 
-// --- SECTOR TABS ---
+// --- DOMAIN / SECTOR TABS ---
 let currentSector = "all";
 function renderSectorTabs(jobs) {
-    const sectors = {};
-    for (const j of jobs) { const s = getSector(j.department); sectors[s] = (sectors[s]||0)+1; }
-    const names = Object.keys(sectors).sort();
-    let html = `<button class="tab-btn ${currentSector==="all"?"active":""}" onclick="filterSector('all')">All (${jobs.length})</button>`;
-    for (const s of names) html += `<button class="tab-btn ${currentSector===s?"active":""}" onclick="filterSector('${s}')">${s} (${sectors[s]})</button>`;
+    const sc = getScorecard();
+    let html = "";
+    if (!sc.length) {
+        // No scorecard — fall back to department-based sector tabs
+        const sectors = {};
+        for (const j of jobs) { const s = getSector(j.department); sectors[s] = (sectors[s]||0)+1; }
+        const names = Object.keys(sectors).sort();
+        html = `<button class="tab-btn ${currentSector==="all"?"active":""}" onclick="filterSector('all')">All (${jobs.length})</button>`;
+        for (const s of names) html += `<button class="tab-btn ${currentSector===s?"active":""}" onclick="filterSector('${s}')">${s} (${sectors[s]})</button>`;
+    } else {
+        // Domain tabs based on scorecard categories matched in job descriptions
+        const domainCounts = {};
+        let unknownCount = 0;
+        for (const j of jobs) {
+            const domains = getJobDomains(j);
+            if (!domains.length) { unknownCount++; }
+            else { for (const d of domains) { domainCounts[d] = (domainCounts[d]||0)+1; } }
+        }
+        const names = Object.keys(domainCounts).sort();
+        html = `<button class="tab-btn ${currentSector==="all"?"active":""}" onclick="filterSector('all')">All (${jobs.length})</button>`;
+        for (const s of names) html += `<button class="tab-btn ${currentSector===s?"active":""}" onclick="filterSector('${esc(s)}')">${esc(s)} (${domainCounts[s]})</button>`;
+        if (unknownCount) html += `<button class="tab-btn ${currentSector==="Unknown"?"active":""}" onclick="filterSector('Unknown')">Unknown (${unknownCount})</button>`;
+    }
     document.getElementById("sector-tabs").innerHTML = html;
 }
 
@@ -353,17 +412,49 @@ function filterSector(s) { currentSector = s; applyFilters(); }
 // --- RENDER JOBS ---
 function renderJobs(jobs) {
     const uj = getUserJobs();
+    const sc = getScorecard();
     const list = document.getElementById("job-list");
     let html = "";
     let count = 0;
     for (let i = 0; i < jobs.length; i++) {
         const j = jobs[i];
-        if (currentSector !== "all" && getSector(j.department) !== currentSector) continue;
+        if (currentSector !== "all") {
+            if (sc.length) {
+                const domains = getJobDomains(j);
+                if (currentSector === "Unknown" && domains.length) continue;
+                if (currentSector !== "Unknown" && !domains.includes(currentSector)) continue;
+            } else {
+                if (getSector(j.department) !== currentSector) continue;
+            }
+        }
         const st = uj[j.url]?.status || "new";
         const fav = faviconUrl(j.source_url||"");
         const initial = (j.source||"?")[0];
-        const score = j._score||0;
+        const dm = j._dm;
         count++;
+
+        let scoresHtml = "";
+        if (dm) {
+            const badges = [];
+            if (sc.length) {
+                if (dm.domainScore) badges.push(`<span class="match-badge match-${scoreCls(dm.domainScore)}" title="Domain match">D ${dm.domainScore}%</span>`);
+                if (dm.mustScore) badges.push(`<span class="match-badge match-${scoreCls(dm.mustScore)}" title="Must-have match">M ${dm.mustScore}%</span>`);
+                if (dm.niceScore) badges.push(`<span class="match-badge match-${scoreCls(dm.niceScore)}" title="Nice-to-have match">N ${dm.niceScore}%</span>`);
+            }
+            if (dm.bilingual) badges.push(`<span class="tag tag-bilingual">🌐 Bilingual</span>`);
+            if (badges.length) scoresHtml += `<div class="score-row">${badges.join("")}</div>`;
+
+            if (sc.length && (dm.matchedDomains.length || dm.matchedMusts.length || dm.matchedNices.length)) {
+                let bd = `<details class="match-expand"><summary>Match breakdown</summary><div class="match-breakdown-inner">`;
+                if (dm.matchedDomains.length) bd += `<div class="mb-section"><strong>Domains:</strong> ${dm.matchedDomains.map(d => `<span class="kw-match">${esc(d.name)}</span>`).join(" ")}</div>`;
+                if (dm.matchedMusts.length) bd += `<div class="mb-section"><strong>Must-haves:</strong> ${dm.matchedMusts.map(s => `<span class="kw-match">${esc(s.skill)} <small>${s.rating}/5</small></span>`).join(" ")}</div>`;
+                if (dm.matchedNices.length) bd += `<div class="mb-section"><strong>Nice-to-haves:</strong> ${dm.matchedNices.map(s => `<span class="kw-match">${esc(s.skill)} <small>${s.rating}/5</small></span>`).join(" ")}</div>`;
+                if (dm.missingSkills.length) bd += `<div class="mb-section"><em class="mb-missing-label">Not mentioned (${dm.missingSkills.length} of your skills):</em> ${dm.missingSkills.map(s => `<span class="kw-miss">${esc(s.skill)}</span>`).join(" ")}</div>`;
+                bd += `</div></details>`;
+                scoresHtml += bd;
+            }
+        }
+
         html += `<article class="job-card" data-url="${esc(j.url)}">
             <div class="job-card-body" onclick="openDetail(${JOBS.indexOf(j)})" style="cursor:pointer">
                 <div class="job-logo"><img src="${fav}" width="48" height="48" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 rx=%228%22 fill=%22%23667%22/><text x=%2224%22 y=%2232%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2220%22>${initial}</text></svg>'"></div>
@@ -379,11 +470,9 @@ function renderJobs(jobs) {
                         ${j.salary_text?`<span class="tag tag-salary">${esc(j.salary_text)}</span>`:""}
                     </div>
                     ${j.description?`<div class="job-description">${sanitizeHtml((j.description||"").slice(0,500))}</div>`:""}
+                    ${scoresHtml}
                     <div class="job-footer">
                         <small class="job-date" title="Retrieved: ${(j.retrieved_at||"").slice(0,16).replace("T"," ")}">${(j.retrieved_at||j.first_seen||"").slice(0,10)}</small>
-                        ${score?`<span class="match-badge match-${score>=8?"high":score>=5?"mid":"low"}">${score}/10</span>`:""}
-                        ${j._mustFlag?`<span class="must-flag" title="Must-have weighted score below 50%">⚠ Musts: ${j._mustScore}%</span>`:""}
-                        ${(j._mustTotal && !j._mustFlag)?`<span class="must-ok" title="Must-have weighted score">Musts: ${j._mustScore}%</span>`:""}
                         <small class="status-label status-${st}">${st}</small>
                     </div>
                 </div>
@@ -461,28 +550,48 @@ function openDetail(idx) {
     if (j.employment_type) meta += ` · <span class="tag tag-type">${esc(j.employment_type)}</span>`;
     if (j.department) meta += ` · <span class="tag tag-dept">${esc(j.department)}</span>`;
     if (j.salary_text) meta += ` · <span class="tag tag-salary">${esc(j.salary_text)}</span>`;
-    if (j._score) { const cls = j._score>=8?"high":j._score>=5?"mid":"low"; meta += ` · <span class="match-badge match-${cls}">${j._score}/10</span>`; }
     document.getElementById("detail-meta").innerHTML = meta;
 
     const dm = j._dm || detailedMatch(j.description || "");
+    const sc = getScorecard();
     let kwHtml = "";
-    if (dm.mustTotal || dm.niceTotal) {
-        kwHtml += `<div class="match-breakdown">`;
-        kwHtml += `<div class="mb-score">Score: <strong>${dm.score}/10</strong> (must-haves ${dm.mustScore}% × 0.7 + nice-to-haves ${dm.niceScore}% × 0.3)</div>`;
-        if (dm.mustTotal) {
-            kwHtml += `<div class="mb-row ${dm.mustFlag?"mb-flag":""}"><strong>Must-haves</strong> (${dm.matchedMusts.length} skills, weighted ${Math.round(dm.mustWeighted*100)/100}/${dm.mustMax})${dm.mustFlag?" ⚠ Below 50%":""}`;
-            kwHtml += `<div class="mb-skills">`;
-            for (const s of dm.matchedMusts) kwHtml += `<span class="kw-match">${s.skill} <small>${s.rating}/5</small></span> `;
-            kwHtml += `</div></div>`;
-        }
-        if (dm.niceTotal) {
-            kwHtml += `<div class="mb-row"><strong>Nice-to-haves</strong> (${dm.matchedNices.length} skills, weighted ${Math.round(dm.niceWeighted*100)/100}/${dm.niceMax})`;
-            kwHtml += `<div class="mb-skills">`;
-            for (const s of dm.matchedNices) kwHtml += `<span class="kw-match">${s.skill} <small>${s.rating}/5</small></span> `;
-            kwHtml += `</div></div>`;
-        }
-        kwHtml += `</div>`;
+
+    if (dm.bilingual) {
+        kwHtml += `<div class="detail-bilingual"><span class="tag tag-bilingual">🌐 Requires German &amp; English</span></div>`;
     }
+
+    if (sc.length) {
+        kwHtml += `<div class="detail-scores">
+            <span class="match-badge match-${scoreCls(dm.domainScore)}" title="Domain match">Domain ${dm.domainScore}%</span>
+            <span class="match-badge match-${scoreCls(dm.mustScore)}" title="Must-have match">Must-haves ${dm.mustScore}%</span>
+            <span class="match-badge match-${scoreCls(dm.niceScore)}" title="Nice-to-have match">Nice-to-haves ${dm.niceScore}%</span>
+        </div>`;
+
+        if (dm.matchedDomains.length) {
+            kwHtml += `<details class="match-section" open><summary><strong>Domain match</strong> — ${dm.matchedDomains.length} domain${dm.matchedDomains.length>1?"s":""}</summary><div class="mb-skills">`;
+            for (const d of dm.matchedDomains) kwHtml += `<span class="kw-match">${esc(d.name)} <small>${d.skills.length} skill${d.skills.length>1?"s":""}</small></span>`;
+            kwHtml += `</div></details>`;
+        }
+
+        if (dm.matchedMusts.length) {
+            kwHtml += `<details class="match-section" open><summary><strong>Must-haves matched</strong> — ${dm.matchedMusts.length} of your skills</summary><div class="mb-skills">`;
+            for (const s of dm.matchedMusts) kwHtml += `<span class="kw-match">${esc(s.skill)} <small>${s.rating}/5</small></span>`;
+            kwHtml += `</div></details>`;
+        }
+
+        if (dm.matchedNices.length) {
+            kwHtml += `<details class="match-section"><summary><strong>Nice-to-haves matched</strong> — ${dm.matchedNices.length} of your skills</summary><div class="mb-skills">`;
+            for (const s of dm.matchedNices) kwHtml += `<span class="kw-match">${esc(s.skill)} <small>${s.rating}/5</small></span>`;
+            kwHtml += `</div></details>`;
+        }
+
+        if (dm.missingSkills.length) {
+            kwHtml += `<details class="match-section"><summary>Your skills not mentioned — ${dm.missingSkills.length}</summary><div class="mb-skills">`;
+            for (const s of dm.missingSkills) kwHtml += `<span class="kw-miss">${esc(s.skill)}</span>`;
+            kwHtml += `</div></details>`;
+        }
+    }
+
     document.getElementById("detail-keywords").innerHTML = kwHtml;
     document.getElementById("detail-description").innerHTML = sanitizeHtml(j.description) || "No description available.";
     document.getElementById("detail-modal").showModal();
@@ -506,6 +615,7 @@ function saveDetailNotes() {
 // --- KANBAN ---
 function renderKanban() {
     const uj = getUserJobs();
+    const sc = getScorecard();
     const cols = {};
     for (const c of TRACKER_COLS) cols[c] = [];
     for (const j of JOBS) {
@@ -517,7 +627,13 @@ function renderKanban() {
     for (const col of TRACKER_COLS) {
         html += `<div class="kanban-col"><div class="kanban-col-header"><span class="kanban-col-title status-${col}">${col.charAt(0).toUpperCase()+col.slice(1)}</span><span class="kanban-col-count">${cols[col].length}</span></div><div class="kanban-cards">`;
         for (const j of cols[col]) {
-            const score = j._score||0;
+            const dm = j._dm;
+            let scores = "";
+            if (sc.length && dm) {
+                if (dm.domainScore) scores += `<span class="match-badge match-${scoreCls(dm.domainScore)}">D${dm.domainScore}%</span> `;
+                if (dm.mustScore) scores += `<span class="match-badge match-${scoreCls(dm.mustScore)}">M${dm.mustScore}%</span> `;
+                if (dm.niceScore) scores += `<span class="match-badge match-${scoreCls(dm.niceScore)}">N${dm.niceScore}%</span>`;
+            }
             html += `<div class="kanban-card" onclick="openDetail(${JOBS.indexOf(j)})">
                 <div class="kc-title">${esc(j.title.slice(0,40))}${j.title.length>40?"...":""}</div>
                 <div class="kc-company">${esc(j.source)}</div>
@@ -526,7 +642,8 @@ function renderKanban() {
                     ${j.work_mode?`<span class="tag tag-workmode">${esc(j.work_mode)}</span>`:""}
                     ${j.salary_text?`<span class="tag tag-salary">${esc(j.salary_text.slice(0,20))}</span>`:""}
                 </div>
-                ${score?`<span class="match-badge match-${score>=8?"high":score>=5?"mid":"low"}">${score}/10</span>`:""}
+                ${scores?`<div class="kc-scores">${scores}</div>`:""}
+                ${dm?.bilingual?`<span class="tag tag-bilingual" style="font-size:0.65rem">🌐 Bilingual</span>`:""}
             </div>`;
         }
         html += `</div></div>`;
@@ -548,7 +665,6 @@ function renderScorecard() {
         html += `</tbody></table></div></article>`;
         el.innerHTML = html;
 
-        // Pre-populate editor
         const rows = document.getElementById("sc-rows");
         rows.innerHTML = "";
         for (const s of sc) addScorecardRow(s.category, s.skill, s.rating);
@@ -618,7 +734,7 @@ function importScorecard() {
 
 function clearScorecard() {
     localStorage.removeItem("jh_scorecard");
-    for (const j of JOBS) { j._score = 0; j._dm = null; j._mustScore = 0; j._mustFlag = false; j._mustTotal = 0; j._niceScore = 0; j._niceTotal = 0; }
+    for (const j of JOBS) { j._dm = null; j._domainScore = 0; j._mustScore = 0; j._niceScore = 0; j._bilingual = false; }
     document.getElementById("cv-banner").style.display = "flex";
     renderScorecard();
     applyFilters();
@@ -629,10 +745,10 @@ function exportCSV() {
     const uj = getUserJobs();
     const tracked = JOBS.filter(j => { const s = uj[j.url]?.status; return s && TRACKER_COLS.includes(s); });
     if (!tracked.length) { alert("No tracked jobs to export."); return; }
-    let csv = "Title,Company,URL,Location,Work Mode,Employment Type,Department,Salary,Status,Notes,Match Score\n";
+    let csv = "Title,Company,URL,Location,Work Mode,Employment Type,Department,Salary,Status,Notes,Domain%,Must%,Nice%,Bilingual\n";
     for (const j of tracked) {
         const u = uj[j.url]||{};
-        csv += [j.title,j.source,j.url,j.location,j.work_mode,j.employment_type,j.department,j.salary_text,u.status,u.notes||"",j._score||0].map(v=>`"${String(v||"").replace(/"/g,'""')}"`).join(",")+"\n";
+        csv += [j.title,j.source,j.url,j.location,j.work_mode,j.employment_type,j.department,j.salary_text,u.status,u.notes||"",j._domainScore||0,j._mustScore||0,j._niceScore||0,j._bilingual?"yes":"no"].map(v=>`"${String(v||"").replace(/"/g,'""')}"`).join(",")+"\n";
     }
     const blob = new Blob([csv], {type:"text/csv"});
     const a = document.createElement("a");

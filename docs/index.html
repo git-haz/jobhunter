@@ -79,17 +79,43 @@
                                 <option value="hidden">Hidden</option>
                             </select>
                         </label>
-                        <label>Min CV Match
-                            <select id="f-match">
-                                <option value="0">Any</option>
-                                <option value="1">1+</option><option value="2">2+</option>
-                                <option value="3">3+</option><option value="4">4+</option>
-                                <option value="5">5+</option><option value="6">6+</option>
-                                <option value="7">7+</option><option value="8">8+</option>
-                                <option value="9">9+</option><option value="10">10</option>
+                        <label>Bilingual
+                            <select id="f-bilingual">
+                                <option value="">Any</option>
+                                <option value="yes">Required (DE + EN)</option>
+                                <option value="no">Not required</option>
                             </select>
                         </label>
                         <label>Exclude <input type="text" id="f-exclude" placeholder='e.g. intern, "support"'></label>
+                    </div>
+                    <div class="grid">
+                        <label>Min Domain %
+                            <select id="f-domain">
+                                <option value="0">Any</option>
+                                <option value="10">10%+</option>
+                                <option value="25">25%+</option>
+                                <option value="50">50%+</option>
+                                <option value="75">75%+</option>
+                            </select>
+                        </label>
+                        <label>Min Must-have %
+                            <select id="f-must">
+                                <option value="0">Any</option>
+                                <option value="25">25%+</option>
+                                <option value="50">50%+</option>
+                                <option value="60">60%+</option>
+                                <option value="75">75%+</option>
+                            </select>
+                        </label>
+                        <label>Min Nice-to-have %
+                            <select id="f-nice">
+                                <option value="0">Any</option>
+                                <option value="25">25%+</option>
+                                <option value="50">50%+</option>
+                                <option value="60">60%+</option>
+                                <option value="75">75%+</option>
+                            </select>
+                        </label>
                     </div>
                     <div class="grid">
                         <label>Retrieved From <input type="date" id="f-date-from"></label>
@@ -102,7 +128,9 @@
                                 <option value="date_desc">Newest first</option>
                                 <option value="date_asc">Oldest first</option>
                                 <option value="company_asc">Company A-Z</option>
-                                <option value="match_desc">Best CV match</option>
+                                <option value="domain_desc">Best domain match</option>
+                                <option value="must_desc">Best must-have match</option>
+                                <option value="nice_desc">Best nice-to-have match</option>
                             </select>
                         </label>
                         <button class="outline" onclick="applyFilters()">Apply</button>
