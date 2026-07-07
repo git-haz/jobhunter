@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "jobhunter",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-p", "3456", "docs"],
+      "port": 3456
+    }
+  ]
+}

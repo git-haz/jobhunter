@@ -45,7 +45,13 @@ EXCLUDE_LOCATIONS = [
     "americas only", "us only", "usa only",
 ]
 
-TITLE_KEYWORDS = ["product", "produkt"]
+TITLE_KEYWORDS = [
+    "product manager", "product owner", "product analyst",
+    "business analyst",
+    "produktmanager", "produktowner", "produktanalyst",
+    # Broader fallback — catches "product lead", "product director", etc.
+    "product", "produkt",
+]
 
 
 def matches_criteria(job):

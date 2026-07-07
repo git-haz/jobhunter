@@ -724,8 +724,11 @@ def scrape_jobs_remotive(plugin_config, scrape_filters=None):
 # ---------------------------------------------------------------------------
 
 def scrape_jobs_arbeitnow(plugin_config, scrape_filters=None):
+    import time as _time
     all_jobs = []
     max_pages = plugin_config.get("max_pages", 3)
+    days_posted = plugin_config.get("days_posted", None)
+    cutoff_ts = (_time.time() - days_posted * 86400) if days_posted else None
 
     for page in range(1, max_pages + 1):
         resp = requests.get(f"https://www.arbeitnow.com/api/job-board-api",
@@ -737,6 +740,8 @@ def scrape_jobs_arbeitnow(plugin_config, scrape_filters=None):
             break
 
         for p in listings:
+            if cutoff_ts and (p.get("created_at") or 0) < cutoff_ts:
+                continue
             title = p.get("title", "")
             is_remote = p.get("remote", False)
             tags = p.get("tags", []) or []
@@ -923,12 +928,16 @@ def scrape_jobs_arbeitsagentur(plugin_config, scrape_filters=None):
         if scrape_filters.get("location"):
             location = scrape_filters["location"]
 
+    days = plugin_config.get("days_posted", None)  # e.g. 3 → last 3 days
+
     all_jobs = []
     for page in range(1, max_pages + 1):
         params = {"was": keyword, "size": 25, "page": page}
         if location:
             params["wo"] = location
             params["umkreis"] = radius
+        if days:
+            params["veroeffentlichtseit"] = days
 
         try:
             resp = requests.get(base, params=params, headers=api_headers, timeout=15)
@@ -1139,12 +1148,65 @@ def scrape_jobs_career_aero(plugin_config, scrape_filters=None):
 # and is not feasible with requests-only scraping.
 # ---------------------------------------------------------------------------
 
+def _fetch_indeed_page(base_url, query, location, radius, start, fromage, req_headers):
+    """Fetch one Indeed results page; returns list of raw job dicts."""
+    params = {
+        "q": query,
+        "l": location,
+        "sort": "date",
+        "radius": radius,
+        "start": start,
+    }
+    if fromage:
+        params["fromage"] = fromage
+    resp = requests.get(f"{base_url}/jobs", params=params, headers=req_headers, timeout=20)
+    resp.raise_for_status()
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+    jobs = []
+    for div in soup.find_all("div", class_=re.compile(r"\bresult\b")):
+        classes = " ".join(div.get("class", []))
+        m = re.search(r'\bjob_([a-f0-9]{16})\b', classes)
+        if not m:
+            continue
+        jk = m.group(1)
+
+        title_el = div.find(["h2", "h3"])
+        company_el = div.find(attrs={"data-testid": "company-name"})
+        loc_el = div.find(attrs={"data-testid": "text-location"})
+
+        title = title_el.get_text(strip=True) if title_el else ""
+        raw_loc = loc_el.get_text(strip=True) if loc_el else ""
+        loc = re.sub(r'^(Hybrides Arbeiten in|Vor Ort in|In)\s+', '', raw_loc, flags=re.I).strip()
+        job_url = f"{base_url}/viewjob?jk={jk}"
+        work_mode = "hybrid" if "hybrid" in raw_loc.lower() else classify_text(raw_loc, WORK_MODE_KEYWORDS)
+
+        jobs.append({
+            "jk": jk,
+            "external_id": jk,
+            "title": title,
+            "url": job_url,
+            "location": loc,
+            "department": "",
+            "work_mode": work_mode,
+            "employment_type": classify_text(title, EMPLOYMENT_TYPE_KEYWORDS),
+            "seniority": classify_text(title, SENIORITY_KEYWORDS),
+            "salary_text": "",
+            "description": title,
+        })
+    return jobs
+
+
 def scrape_jobs_indeed(plugin_config, scrape_filters=None):
     base_url = plugin_config.get("base_url", "https://de.indeed.com").rstrip("/")
     queries = plugin_config.get("indeed_queries", ["product manager"])
-    location = plugin_config.get("indeed_location", "Deutschland")
+    # Support a list of primary locations or a single location
+    primary_locations = plugin_config.get("indeed_locations", [plugin_config.get("indeed_location", "Deutschland")])
+    fallback_locations = plugin_config.get("indeed_fallback_locations", [])
+    fallback_radius = plugin_config.get("indeed_fallback_radius", 100)
     radius = plugin_config.get("indeed_radius", 50)
     pages = plugin_config.get("indeed_pages", 2)
+    fromage = plugin_config.get("indeed_fromage", None)
 
     req_headers = {
         **HEADERS,
@@ -1156,66 +1218,39 @@ def scrape_jobs_indeed(plugin_config, scrape_filters=None):
     all_jobs = []
 
     for query in queries:
-        for page in range(pages):
-            start = page * 10
-            try:
-                resp = requests.get(
-                    f"{base_url}/jobs",
-                    params={
-                        "q": query,
-                        "l": location,
-                        "sort": "date",
-                        "radius": radius,
-                        "start": start,
-                    },
-                    headers=req_headers,
-                    timeout=20,
-                )
-                resp.raise_for_status()
-            except Exception:
-                break
+        query_found = 0
+        for location in primary_locations:
+            for page in range(pages):
+                try:
+                    page_jobs = _fetch_indeed_page(base_url, query, location, radius, page * 10, fromage, req_headers)
+                except Exception:
+                    break
+                new = [j for j in page_jobs if j["jk"] not in seen_jk]
+                for j in new:
+                    seen_jk.add(j["jk"])
+                all_jobs.extend(new)
+                query_found += len(new)
+                if not page_jobs:
+                    break
 
-            soup = BeautifulSoup(resp.text, "html.parser")
-            page_jobs = []
-            for div in soup.find_all("div", class_=re.compile(r"\bresult\b")):
-                classes = " ".join(div.get("class", []))
-                m = re.search(r'\bjob_([a-f0-9]{16})\b', classes)
-                if not m:
-                    continue
-                jk = m.group(1)
-                if jk in seen_jk:
-                    continue
-                seen_jk.add(jk)
+        # Fallback: if no results found for this query across all primary locations
+        if query_found == 0 and fallback_locations:
+            for fb_loc in fallback_locations:
+                for page in range(pages):
+                    try:
+                        page_jobs = _fetch_indeed_page(base_url, query, fb_loc, fallback_radius, page * 10, fromage, req_headers)
+                    except Exception:
+                        break
+                    new = [j for j in page_jobs if j["jk"] not in seen_jk]
+                    for j in new:
+                        seen_jk.add(j["jk"])
+                    all_jobs.extend(new)
+                    if not page_jobs:
+                        break
 
-                title_el = div.find(["h2", "h3"])
-                company_el = div.find(attrs={"data-testid": "company-name"})
-                loc_el = div.find(attrs={"data-testid": "text-location"})
-
-                title = title_el.get_text(strip=True) if title_el else ""
-                company = company_el.get_text(strip=True) if company_el else ""
-                raw_loc = loc_el.get_text(strip=True) if loc_el else ""
-                # Strip "Hybrides Arbeiten in" / "Vor Ort in" prefixes
-                loc = re.sub(r'^(Hybrides Arbeiten in|Vor Ort in|In)\s+', '', raw_loc, flags=re.I).strip()
-
-                job_url = f"https://de.indeed.com/viewjob?jk={jk}"
-                work_mode = "hybrid" if "hybrid" in raw_loc.lower() else classify_text(raw_loc, WORK_MODE_KEYWORDS)
-
-                page_jobs.append({
-                    "external_id": jk,
-                    "title": title,
-                    "url": job_url,
-                    "location": loc,
-                    "department": "",
-                    "work_mode": work_mode,
-                    "employment_type": classify_text(title, EMPLOYMENT_TYPE_KEYWORDS),
-                    "seniority": classify_text(title, SENIORITY_KEYWORDS),
-                    "salary_text": "",
-                    "description": title,
-                })
-
-            all_jobs.extend(page_jobs)
-            if not page_jobs:
-                break
+    # Strip internal 'jk' key before returning
+    for j in all_jobs:
+        j.pop("jk", None)
 
     return apply_scrape_filters(all_jobs, scrape_filters)
 

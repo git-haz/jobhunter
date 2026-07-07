@@ -3,8 +3,9 @@ platform: arbeitsagentur
 base_url: https://rest.arbeitsagentur.de
 default_keyword: Produktmanager
 default_location: München
-radius: 25
+radius: 100
 max_pages: 2
+days_posted: 3
 filters:
   keywords: []
   exclude_keywords: []
