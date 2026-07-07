@@ -1,5 +1,6 @@
-const APP_VERSION = "1.3.0";
+const APP_VERSION = "1.3.1";
 const VERSION_HISTORY = [
+    {v:"1.3.1",d:"2026-07-07",c:["Indeed DE added as job source (12 new product roles)","383 jobs total (up from 297)","StepStone.de researched — requires JavaScript rendering, not feasible with current scraper"]},
     {v:"1.3.0",d:"2026-07-07",c:["3 separate match scores: Domain %, Must-have %, Nice-to-have %","Bilingual detection: flags jobs requiring German + English","Domain-based tabs from scorecard categories (Unknown for unclassified)","Expandable match breakdown on every job card","Filters for each score dimension and bilingual yes/no"]},
     {v:"1.2.0",d:"2026-06-30",c:["6 new airline & travel-tech sources: Amadeus, GetYourGuide, Trivago, Ryanair, Eurowings Digital, Condor","New Workable platform scraper (reusable for any Workable-hosted board)","New career.aero HTML scraper (Interpersonal platform)","277+ jobs seeded, deduplicated by URL"]},
     {v:"1.1.0",d:"2026-06-29",c:["User-managed scorecard (upload, paste, or build manually)","Matching only on explicit skill mentions in job descriptions","No CV or inference — scorecard is the sole source of truth","Scorecard editor with category/skill/rating rows","Import from Markdown tables, tab/pipe/comma separated text"]},

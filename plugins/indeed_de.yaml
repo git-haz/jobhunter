@@ -1,0 +1,13 @@
+name: Indeed DE
+platform: indeed
+base_url: https://de.indeed.com
+indeed_location: Deutschland
+indeed_queries:
+  - product manager
+  - Produktmanager
+indeed_radius: 100
+indeed_pages: 3
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

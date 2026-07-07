@@ -14,7 +14,7 @@ HEADERS = {
 }
 
 WORK_MODE_KEYWORDS = {
-    "remote": ["remote", "fully remote", "work from anywhere", "remote-only"],
+    "remote": ["remote", "fully remote", "work from anywhere", "remote-only", "homeoffice", "home office"],
     "hybrid": ["hybrid", "partly remote", "flexible"],
     "onsite": ["on-site", "onsite", "office", "in-office", "vor ort"],
 }
@@ -1132,6 +1132,94 @@ def scrape_jobs_career_aero(plugin_config, scrape_filters=None):
     return apply_scrape_filters(jobs, scrape_filters)
 
 
+# ---------------------------------------------------------------------------
+# Indeed HTML scraper — parses job cards from search results pages.
+# Jobs are identified by the jobkey embedded in card CSS classes (job_XXXX).
+# StepStone loads data via client-side JS (public-api requires auth cookies)
+# and is not feasible with requests-only scraping.
+# ---------------------------------------------------------------------------
+
+def scrape_jobs_indeed(plugin_config, scrape_filters=None):
+    base_url = plugin_config.get("base_url", "https://de.indeed.com").rstrip("/")
+    queries = plugin_config.get("indeed_queries", ["product manager"])
+    location = plugin_config.get("indeed_location", "Deutschland")
+    radius = plugin_config.get("indeed_radius", 50)
+    pages = plugin_config.get("indeed_pages", 2)
+
+    req_headers = {
+        **HEADERS,
+        "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }
+
+    seen_jk = set()
+    all_jobs = []
+
+    for query in queries:
+        for page in range(pages):
+            start = page * 10
+            try:
+                resp = requests.get(
+                    f"{base_url}/jobs",
+                    params={
+                        "q": query,
+                        "l": location,
+                        "sort": "date",
+                        "radius": radius,
+                        "start": start,
+                    },
+                    headers=req_headers,
+                    timeout=20,
+                )
+                resp.raise_for_status()
+            except Exception:
+                break
+
+            soup = BeautifulSoup(resp.text, "html.parser")
+            page_jobs = []
+            for div in soup.find_all("div", class_=re.compile(r"\bresult\b")):
+                classes = " ".join(div.get("class", []))
+                m = re.search(r'\bjob_([a-f0-9]{16})\b', classes)
+                if not m:
+                    continue
+                jk = m.group(1)
+                if jk in seen_jk:
+                    continue
+                seen_jk.add(jk)
+
+                title_el = div.find(["h2", "h3"])
+                company_el = div.find(attrs={"data-testid": "company-name"})
+                loc_el = div.find(attrs={"data-testid": "text-location"})
+
+                title = title_el.get_text(strip=True) if title_el else ""
+                company = company_el.get_text(strip=True) if company_el else ""
+                raw_loc = loc_el.get_text(strip=True) if loc_el else ""
+                # Strip "Hybrides Arbeiten in" / "Vor Ort in" prefixes
+                loc = re.sub(r'^(Hybrides Arbeiten in|Vor Ort in|In)\s+', '', raw_loc, flags=re.I).strip()
+
+                job_url = f"https://de.indeed.com/viewjob?jk={jk}"
+                work_mode = "hybrid" if "hybrid" in raw_loc.lower() else classify_text(raw_loc, WORK_MODE_KEYWORDS)
+
+                page_jobs.append({
+                    "external_id": jk,
+                    "title": title,
+                    "url": job_url,
+                    "location": loc,
+                    "department": "",
+                    "work_mode": work_mode,
+                    "employment_type": classify_text(title, EMPLOYMENT_TYPE_KEYWORDS),
+                    "seniority": classify_text(title, SENIORITY_KEYWORDS),
+                    "salary_text": "",
+                    "description": title,
+                })
+
+            all_jobs.extend(page_jobs)
+            if not page_jobs:
+                break
+
+    return apply_scrape_filters(all_jobs, scrape_filters)
+
+
 PLATFORM_SCRAPERS = {
     "teamtailor": scrape_jobs_html,
     "personio": scrape_jobs_html,
@@ -1148,6 +1236,7 @@ PLATFORM_SCRAPERS = {
     "fourday": scrape_jobs_4dayweek,
     "workable": scrape_jobs_workable,
     "career_aero": scrape_jobs_career_aero,
+    "indeed": scrape_jobs_indeed,
 }
 
 
