@@ -14,7 +14,8 @@
             <li><a href="#" class="version-link" onclick="document.getElementById('version-modal').showModal(); return false;" id="version-display"></a></li>
         </ul>
         <ul>
-            <li><a href="#" onclick="showView('feed')" class="nav-link active" data-view="feed">Feed</a></li>
+            <li><a href="#" onclick="showView('skills')" class="nav-link" data-view="skills">Skills</a></li>
+            <li><a href="#" onclick="showView('feed')" class="nav-link" data-view="feed">Feed</a></li>
             <li><a href="#" onclick="showView('tracker')" class="nav-link" data-view="tracker">Tracker</a></li>
             <li><a href="#" onclick="showView('scorecard')" class="nav-link" data-view="scorecard">Scorecard</a></li>
         </ul>
@@ -25,12 +26,25 @@
     <main class="container">
         <!-- CV Banner -->
         <div class="cv-banner" id="cv-banner" style="display:none">
-            <span>Add your skills scorecard to get match scores for every job.</span>
+            <span>Add your skills scorecard to get domain/must-have/nice-to-have match scores.</span>
             <a href="#" onclick="showView('scorecard')" role="button" class="outline small">Add Scorecard</a>
         </div>
 
+        <!-- SKILLS VIEW -->
+        <div id="view-skills" style="display:none">
+            <div class="skills-page-header">
+                <h2>Select your Skills</h2>
+                <p class="skills-subtitle">Toggle the keywords that are relevant to your job search. Your feed will show which of these appear in each job description, and you can filter by them.</p>
+            </div>
+            <div id="skills-grid" class="skills-grid"></div>
+            <div class="skills-page-actions">
+                <button onclick="saveAndGoFeed()">View Jobs &rarr;</button>
+                <button class="outline secondary" onclick="clearMySkills()">Clear All</button>
+            </div>
+        </div>
+
         <!-- FEED VIEW -->
-        <div id="view-feed">
+        <div id="view-feed" style="display:none">
             <details class="filters-section" id="filters-section">
                 <summary>Search &amp; Filters</summary>
                 <div class="filters-form">
@@ -88,33 +102,13 @@
                         </label>
                         <label>Exclude <input type="text" id="f-exclude" placeholder='e.g. intern, "support"'></label>
                     </div>
-                    <div class="grid">
-                        <label>Min Domain %
-                            <select id="f-domain">
-                                <option value="0">Any</option>
-                                <option value="10">10%+</option>
-                                <option value="25">25%+</option>
-                                <option value="50">50%+</option>
-                                <option value="75">75%+</option>
-                            </select>
-                        </label>
-                        <label>Min Must-have %
-                            <select id="f-must">
-                                <option value="0">Any</option>
-                                <option value="25">25%+</option>
-                                <option value="50">50%+</option>
-                                <option value="60">60%+</option>
-                                <option value="75">75%+</option>
-                            </select>
-                        </label>
-                        <label>Min Nice-to-have %
-                            <select id="f-nice">
-                                <option value="0">Any</option>
-                                <option value="25">25%+</option>
-                                <option value="50">50%+</option>
-                                <option value="60">60%+</option>
-                                <option value="75">75%+</option>
-                            </select>
+                    <div class="grid kw-filter-row">
+                        <label style="grid-column: 1 / -1">Must include keywords
+                            <div class="kw-multiselect" id="kw-filter">
+                                <div class="kw-chips" id="kw-chips"></div>
+                                <button type="button" class="kw-toggle" id="kw-toggle" onclick="toggleKwDropdown()">+ Add keyword filter ▾</button>
+                                <div class="kw-dropdown" id="kw-dropdown"></div>
+                            </div>
                         </label>
                     </div>
                     <div class="grid">
@@ -128,6 +122,7 @@
                                 <option value="date_desc">Newest first</option>
                                 <option value="date_asc">Oldest first</option>
                                 <option value="company_asc">Company A-Z</option>
+                                <option value="kw_desc">Most keywords matched</option>
                                 <option value="domain_desc">Best domain match</option>
                                 <option value="must_desc">Best must-have match</option>
                                 <option value="nice_desc">Best nice-to-have match</option>
