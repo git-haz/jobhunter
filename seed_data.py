@@ -1,5 +1,6 @@
 """Seed data generator — runs all plugins and saves results as static JSON."""
 import os
+import re
 import sys
 import json
 import yaml
@@ -8,6 +9,25 @@ from scraper import scrape_jobs
 
 PLUGINS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "plugins")
 OUTPUT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs", "data", "jobs.json")
+FRAMEWORK_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs", "data", "skills_framework.json")
+
+HTML_TAG_RE = re.compile(r"<[^>]+>")
+
+def load_framework():
+    with open(FRAMEWORK_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def compute_matched_skills(job, framework_skills):
+    """Return list of skill names whose keywords appear in the job title+description."""
+    raw = (job.get("title") or "") + " " + (job.get("description") or "")
+    text = HTML_TAG_RE.sub(" ", raw).lower()
+    matched = []
+    for skill in framework_skills:
+        for kw in skill.get("keywords", []):
+            if kw.lower() in text:
+                matched.append(skill["name"])
+                break
+    return matched
 
 SEED_FILTERS = {
     "keyword": "product",
@@ -75,6 +95,10 @@ def matches_criteria(job):
 
 
 def run_seed():
+    framework = load_framework()
+    framework_skills = framework.get("skills", [])
+    print(f"Loaded skills framework: {len(framework_skills)} skills")
+
     # Load existing seed data to merge
     existing_jobs = []
     if os.path.exists(OUTPUT_PATH):
@@ -82,6 +106,15 @@ def run_seed():
             old = json.load(f)
             existing_jobs = old.get("jobs", [])
         print(f"Loaded {len(existing_jobs)} existing jobs for merge.")
+
+    # Backfill skill metadata on existing jobs that lack it
+    backfilled = 0
+    for job in existing_jobs:
+        if "_matched_skills" not in job:
+            job["_matched_skills"] = compute_matched_skills(job, framework_skills)
+            backfilled += 1
+    if backfilled:
+        print(f"Backfilled _matched_skills on {backfilled} existing jobs.")
 
     all_jobs = list(existing_jobs)
     errors = []
@@ -109,6 +142,7 @@ def run_seed():
                     job["source"] = name
                     job["source_url"] = config.get("base_url", "")
                     job["retrieved_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                    job["_matched_skills"] = compute_matched_skills(job, framework_skills)
                     matched.append(job)
             all_jobs.extend(matched)
             print(f"{len(jobs)} scraped, {len(matched)} matched")

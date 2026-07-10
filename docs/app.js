@@ -110,10 +110,13 @@ function recomputeSkillsMatch(threshold) {
         return;
     }
     const computedScores = computeAllSkillScores();
-    const qualifyingSkills = FRAMEWORK.skills.filter(s => (computedScores[s.name] || 0) >= threshold);
+    const qualifyingNames = new Set(
+        FRAMEWORK.skills
+            .filter(s => (computedScores[s.name] || 0) >= threshold)
+            .map(s => s.name)
+    );
     for (const j of JOBS) {
-        const text = ((j.title || "") + " " + (j.description || "")).toLowerCase();
-        j._skillsMatch = qualifyingSkills.filter(s => text.includes(s.name.toLowerCase())).length;
+        j._skillsMatch = (j._matched_skills || []).filter(n => qualifyingNames.has(n)).length;
     }
 }
 
@@ -828,15 +831,18 @@ function openDetail(idx) {
     if (j._bilingual) kwHtml += `<div class="detail-bilingual"><span class="tag tag-bilingual">🌐 Requires German &amp; English</span></div>`;
 
     const minSkills = parseFloat(document.getElementById("f-min-skills")?.value || "0");
-    if (j._skillsMatch > 0 || minSkills > 0) {
+    if ((j._matched_skills || []).length > 0) {
         const computedScores = computeAllSkillScores();
-        const qualifyingSkills = minSkills > 0
-            ? FRAMEWORK.skills.filter(s => (computedScores[s.name] || 0) >= minSkills)
-            : FRAMEWORK.skills.filter(s => hasAnyScore(getSkillScores()[s.name]));
-        const text = ((j.title||"") + " " + (j.description||"")).toLowerCase();
-        const matched = qualifyingSkills.filter(s => text.includes(s.name.toLowerCase()));
-        if (matched.length) {
-            kwHtml += `<details class="match-section" open><summary><strong>Skills match: ${matched.length}</strong>${minSkills > 0 ? ` (skills rated ≥ ${minSkills.toFixed(1)})` : ""}</summary><div class="mb-skills">${matched.map(s => `<span class="kw-match">${esc(s.name)} <small>${(computedScores[s.name]||0).toFixed(1)}</small></span>`).join("")}</div></details>`;
+        const matchedSkills = FRAMEWORK.skills.filter(s => (j._matched_skills || []).includes(s.name));
+        const qualifyingMatched = minSkills > 0
+            ? matchedSkills.filter(s => (computedScores[s.name] || 0) >= minSkills)
+            : matchedSkills.filter(s => hasAnyScore(getSkillScores()[s.name]));
+        if (matchedSkills.length > 0) {
+            const label = minSkills > 0
+                ? `Skills match: ${qualifyingMatched.length} (of ${matchedSkills.length} matched, rated ≥ ${minSkills.toFixed(1)})`
+                : `Skills found: ${matchedSkills.length}`;
+            const displayList = minSkills > 0 ? qualifyingMatched : matchedSkills;
+            kwHtml += `<details class="match-section" open><summary><strong>${label}</strong></summary><div class="mb-skills">${displayList.map(s => `<span class="kw-match">${esc(s.name)} <small>${(computedScores[s.name]||0).toFixed(1)}</small></span>`).join("")}</div></details>`;
         }
     }
 
