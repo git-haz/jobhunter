@@ -51,6 +51,8 @@ TITLE_KEYWORDS = [
     "produktmanager", "produktowner", "produktanalyst",
     # Broader fallback — catches "product lead", "product director", etc.
     "product", "produkt",
+    # Catches "analyst" roles not prefixed with "product" or "business"
+    "analyst",
 ]
 
 

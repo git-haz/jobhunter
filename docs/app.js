@@ -1,14 +1,11 @@
-const APP_VERSION = "2.0.0";
+const APP_VERSION = "3.0.0";
 const VERSION_HISTORY = [
+    {v:"3.0.0",d:"2026-07-10",c:["Full skills assessment framework — 37 skills, 6 dimensions, 0–5 button ratings","Editable scoring formula via weight sliders per dimension","Role scores for BA, PO, PM based on skill relevance","'Min rated skills' feed filter — only show jobs mentioning your high-rated skills","'Skills match' chip on job cards showing how many qualifying skills appear","Category scores with collapsible sections; mobile cards / desktop 2-column grid","Reseeded: product + analyst as separate searches"]},
     {v:"2.0.0",d:"2026-07-09",c:["Select your Skills page — toggle keywords from config, see job counts per keyword","Keyword extraction from job descriptions using keywords.json config","Matched keywords shown as chips on every job card","Keyword multiselect filter on feed (must include ALL selected keywords)","Sort by number of keywords matched","Seeding expanded: 4 role types, UK + DE + EU fallback locations, 3-day freshness filter"]},
     {v:"1.3.1",d:"2026-07-07",c:["Indeed DE added as job source","418 jobs total, 3-day freshness filter, UK + EU searches","Seeding: business analyst, product analyst, product owner, product manager"]},
     {v:"1.3.0",d:"2026-07-07",c:["3 separate match scores: Domain %, Must-have %, Nice-to-have %","Bilingual detection: flags jobs requiring German + English","Domain-based tabs from scorecard categories","Expandable match breakdown on every job card"]},
     {v:"1.2.0",d:"2026-06-30",c:["6 new airline & travel-tech sources","New Workable and career.aero scrapers","277+ jobs seeded"]},
-    {v:"1.1.0",d:"2026-06-29",c:["User-managed scorecard","Matching only on explicit skill mentions","Scorecard editor with category/skill/rating rows"]},
-    {v:"1.0.0",d:"2026-06-29",c:["Scorecard-based matching","Must-haves weighted 70%, nice-to-haves 30%","Job detail modal"]},
-    {v:"0.9.3",d:"2026-06-27",c:["Job title multi-select with typeahead"]},
-    {v:"0.9.2",d:"2026-06-27",c:["Search expanded to all Germany","Retrieved date filter, 232 jobs"]},
-    {v:"0.8.0",d:"2026-06-27",c:["Static GitHub Pages architecture","Pre-seeded job data","All user state in localStorage"]},
+    {v:"1.0.0",d:"2026-06-29",c:["Scorecard-based matching","All user state in localStorage"]},
 ];
 const STATUSES = ["new","favorite","apply","applied","interview","rejected","withdrawn","hidden"];
 const TRACKER_COLS = ["favorite","apply","applied","interview","rejected","withdrawn"];
@@ -16,18 +13,84 @@ const TRACKER_COLS = ["favorite","apply","applied","interview","rejected","withd
 let JOBS = [];
 let SEED_META = {};
 let KEYWORD_CONFIG = [];
+let FRAMEWORK = {};
 let currentDetailIdx = null;
 
 // --- STORAGE ---
-function loadState(key, def) { try { return JSON.parse(localStorage.getItem("jh_"+key)) || def; } catch { return def; } }
+function loadState(key, def) { try { return JSON.parse(localStorage.getItem("jh_"+key)) ?? def; } catch { return def; } }
 function saveState(key, val) { localStorage.setItem("jh_"+key, JSON.stringify(val)); }
 function getUserJobs() { return loadState("user_jobs", {}); }
 function setUserJob(url, data) { const uj = getUserJobs(); uj[url] = {...(uj[url]||{}), ...data}; saveState("user_jobs", uj); }
-function getScorecard() { return loadState("scorecard", []); }
-function saveScorecard(sc) { saveState("scorecard", sc); }
-function hasScorecard() { return getScorecard().length > 0; }
 function getMySkills() { return new Set(loadState("my_skills", [])); }
 function saveMySkills(skills) { saveState("my_skills", [...skills]); }
+
+// --- SKILLS FRAMEWORK STORAGE ---
+function getSkillScores() {
+    const saved = loadState("skill_scores_v3", null);
+    if (saved) return saved;
+    // Pre-populate from framework initial_scores
+    const scores = {};
+    for (const skill of (FRAMEWORK.skills || [])) {
+        if (skill.initial_scores && Object.values(skill.initial_scores).some(v => v > 0)) {
+            scores[skill.name] = { ...skill.initial_scores };
+        }
+    }
+    return scores;
+}
+function saveSkillScores(scores) { saveState("skill_scores_v3", scores); }
+function getFormulaWeights() {
+    const saved = loadState("formula_weights", null);
+    if (saved) return saved;
+    const defaults = {};
+    for (const d of (FRAMEWORK.dimensions || [])) defaults[d.key] = 1.0;
+    return defaults;
+}
+function saveFormulaWeights(w) { saveState("formula_weights", w); }
+
+function skillId(name) { return name.replace(/[^a-zA-Z0-9]/g, "-"); }
+function hasAnyScore(dimScores) { return dimScores && Object.values(dimScores).some(v => v > 0); }
+
+// --- SCORE COMPUTATION ---
+function computeSkillScore(dimScores, weights) {
+    let totalW = 0, weightedSum = 0;
+    for (const dim of FRAMEWORK.dimensions) {
+        const w = weights[dim.key] ?? 1;
+        totalW += w;
+        weightedSum += (dimScores[dim.key] || 0) * w;
+    }
+    return totalW > 0 ? Math.round(weightedSum / totalW * 100) / 100 : 0;
+}
+
+function computeAllSkillScores() {
+    const saved = getSkillScores();
+    const weights = getFormulaWeights();
+    const result = {};
+    for (const s of FRAMEWORK.skills) {
+        result[s.name] = computeSkillScore(saved[s.name] || {}, weights);
+    }
+    return result;
+}
+
+function computeCategoryScore(category, allComputedScores) {
+    const rawScores = getSkillScores();
+    const catSkills = FRAMEWORK.skills.filter(s => s.category === category);
+    const ratedSkills = catSkills.filter(s => hasAnyScore(rawScores[s.name]));
+    if (!ratedSkills.length) return 0;
+    return ratedSkills.reduce((sum, s) => sum + (allComputedScores[s.name] || 0), 0) / ratedSkills.length;
+}
+
+function computeRoleScores(allComputedScores) {
+    const rawScores = getSkillScores();
+    const result = {};
+    for (const role of FRAMEWORK.roles) {
+        const roleSkills = FRAMEWORK.skills.filter(s => s.roles.includes(role.key));
+        const ratedSkills = roleSkills.filter(s => hasAnyScore(rawScores[s.name]));
+        result[role.key] = ratedSkills.length
+            ? ratedSkills.reduce((sum, s) => sum + (allComputedScores[s.name] || 0), 0) / ratedSkills.length
+            : 0;
+    }
+    return result;
+}
 
 // --- KEYWORD MATCHING ---
 function computeKeywords(j) {
@@ -36,141 +99,42 @@ function computeKeywords(j) {
     return KEYWORD_CONFIG.filter(kw => text.includes(kw.toLowerCase()));
 }
 
-// --- SCORECARD MATCHING ---
-const MUST_HEADERS = /(?:must.?have|required|requirements|what you.?(?:ll )?need|what we.?(?:re )?looking for|you bring|qualifications|essential|anforderungen|voraussetzungen|was du mitbringst|das bringst du mit|dein profil|ihr profil|what you.?(?:ll )?bring|your profile|key requirements)/i;
-const NICE_HEADERS = /(?:nice.?to.?have|bonus|preferred|desirable|optional|ideally|additional|plus|advantageous|beneficial|w[üu]nschenswert|von vorteil|idealerweise|zus[äa]tzlich|what.?s a plus|it.?s a bonus|extra points|good to have)/i;
-const NICE_CUES = /(?:nice to have|bonus|preferred|ideally|preferably|desirable|a plus|an advantage|not required|optional|beneficial|von vorteil|w[üu]nschenswert|idealerweise|gerne gesehen|nicht zwingend)/i;
+// --- BILINGUAL DETECTION ---
 const GERMAN_LANG = /\b(german|deutsch(?:e?|kenntnisse)?)\b/i;
 const ENGLISH_LANG = /\b(english|englisch(?:e?|kenntnisse)?)\b/i;
 
-function classifyRequirements(desc) {
-    if (!desc) return { mustText: "", niceText: "" };
-    const lines = desc.replace(/<[^>]+>/g, "\n").split("\n").filter(l => l.trim());
-    let current = "must", sectionFound = false;
-    const mustLines = [], niceLines = [];
-    for (const line of lines) {
-        const s = line.trim();
-        if (NICE_HEADERS.test(s)) { current = "nice"; sectionFound = true; continue; }
-        if (MUST_HEADERS.test(s)) { current = "must"; sectionFound = true; continue; }
-        if (current === "must") mustLines.push(s); else niceLines.push(s);
+// --- SKILLS MATCH ---
+function recomputeSkillsMatch(threshold) {
+    if (!FRAMEWORK.skills || threshold <= 0) {
+        for (const j of JOBS) j._skillsMatch = 0;
+        return;
     }
-    if (sectionFound) return { mustText: mustLines.join(" "), niceText: niceLines.join(" ") };
-    const ml = [], nl = [];
-    for (const line of lines) {
-        const s = line.trim();
-        if (NICE_CUES.test(s)) nl.push(s); else ml.push(s);
+    const computedScores = computeAllSkillScores();
+    const qualifyingSkills = FRAMEWORK.skills.filter(s => (computedScores[s.name] || 0) >= threshold);
+    for (const j of JOBS) {
+        const text = ((j.title || "") + " " + (j.description || "")).toLowerCase();
+        j._skillsMatch = qualifyingSkills.filter(s => text.includes(s.name.toLowerCase())).length;
     }
-    return { mustText: ml.join(" "), niceText: nl.join(" ") };
-}
-
-function findScorecardMatches(text, scorecard) {
-    if (!text || !scorecard.length) return [];
-    const lower = text.toLowerCase().replace(/<[^>]+>/g, " ");
-    const found = [];
-    const sorted = [...scorecard].sort((a, b) => b.skill.length - a.skill.length);
-    const used = new Set();
-    for (const entry of sorted) {
-        const sk = entry.skill.toLowerCase();
-        if (sk && lower.includes(sk) && !used.has(sk)) {
-            used.add(sk);
-            found.push({ skill: entry.skill, category: entry.category || "", rating: entry.rating, weight: entry.rating / 5 });
-        }
-    }
-    return found;
-}
-
-function computeDomainMatch(fullText, scorecard) {
-    const lower = (fullText || "").toLowerCase().replace(/<[^>]+>/g, " ");
-    const domainMap = {};
-    for (const entry of scorecard) {
-        const cat = entry.category || "Other";
-        if (!domainMap[cat]) domainMap[cat] = [];
-        domainMap[cat].push(entry);
-    }
-    let totalWeight = 0, matchedWeight = 0;
-    const matchedDomains = [];
-    for (const [name, skills] of Object.entries(domainMap)) {
-        const avgW = skills.reduce((s, e) => s + e.rating / 5, 0) / skills.length;
-        totalWeight += avgW;
-        const sorted = [...skills].sort((a, b) => b.skill.length - a.skill.length);
-        const matched = [];
-        const used = new Set();
-        for (const e of sorted) {
-            const sk = e.skill.toLowerCase();
-            if (sk && lower.includes(sk) && !used.has(sk)) { used.add(sk); matched.push(e); }
-        }
-        if (matched.length) {
-            matchedWeight += avgW;
-            matchedDomains.push({ name, skills: matched });
-        }
-    }
-    const score = totalWeight > 0 ? Math.round(matchedWeight / totalWeight * 100) : 0;
-    return { score, matchedDomains };
-}
-
-function detailedMatch(description) {
-    const sc = getScorecard();
-    const result = {
-        domainScore: 0, mustScore: 0, niceScore: 0,
-        mustTotal: 0, niceTotal: 0,
-        matchedDomains: [],
-        matchedMusts: [], matchedNices: [],
-        missingSkills: [],
-        bilingual: false,
-    };
-    const plain = (description || "").replace(/<[^>]+>/g, " ");
-    result.bilingual = GERMAN_LANG.test(plain) && ENGLISH_LANG.test(plain);
-    if (!description || !sc.length) return result;
-
-    const { mustText, niceText } = classifyRequirements(description);
-    const { score: domScore, matchedDomains } = computeDomainMatch(description, sc);
-    result.domainScore = domScore;
-    result.matchedDomains = matchedDomains;
-
-    const mustSkills = findScorecardMatches(mustText, sc);
-    const niceSkills = findScorecardMatches(niceText, sc);
-    result.matchedMusts = mustSkills;
-    result.matchedNices = niceSkills;
-    result.mustTotal = mustSkills.length;
-    result.niceTotal = niceSkills.length;
-
-    if (mustSkills.length) result.mustScore = Math.round(mustSkills.reduce((s, x) => s + x.weight, 0) / mustSkills.length * 100);
-    if (niceSkills.length) result.niceScore = Math.round(niceSkills.reduce((s, x) => s + x.weight, 0) / niceSkills.length * 100);
-
-    const fullLower = (description || "").toLowerCase().replace(/<[^>]+>/g, " ");
-    const alreadyMatched = new Set([...mustSkills, ...niceSkills].map(s => s.skill.toLowerCase()));
-    result.missingSkills = sc.filter(e => {
-        const sk = e.skill.toLowerCase();
-        return sk && !alreadyMatched.has(sk) && !fullLower.includes(sk);
-    });
-
-    return result;
 }
 
 function recomputeScores() {
     for (const j of JOBS) {
-        const dm = detailedMatch(j.description || "");
-        j._dm = dm;
-        j._domainScore = dm.domainScore;
-        j._mustScore = dm.mustScore;
-        j._niceScore = dm.niceScore;
-        j._bilingual = dm.bilingual;
+        const plain = (j.description || "").replace(/<[^>]+>/g, " ");
+        j._bilingual = GERMAN_LANG.test(plain) && ENGLISH_LANG.test(plain);
         j._matchedKw = computeKeywords(j);
         j._kwCount = j._matchedKw.length;
+        j._skillsMatch = 0;
     }
 }
 
-// --- SECTOR (fallback when no scorecard loaded) ---
-const SECTOR_MAP = {engineering:["engineering","software","development","backend","frontend","fullstack","devops","infrastructure"],product:["product","product management"],design:["design","ux","ui","creative"],data:["data","analytics","machine learning","ai","artificial intelligence"],marketing:["marketing","growth","content","brand"],sales:["sales","business development","account","revenue"],operations:["operations","supply chain","logistics","project management"],finance:["finance","accounting","tax","treasury"],hr:["human resources","hr","people","talent","recruiting"],"legal & compliance":["legal","compliance","regulatory","risk"],customer:["customer","support","service","success","client"],it:["it","information technology","security","infosec"]};
+// --- SECTOR ---
+const SECTOR_MAP = {engineering:["engineering","software","development","backend","frontend","fullstack","devops"],product:["product management","product owner"],design:["design","ux","ui"],data:["data","analytics","machine learning","ai"],marketing:["marketing","growth","content","brand"],sales:["sales","business development","account"],operations:["operations","supply chain","logistics","project management"],finance:["finance","accounting","treasury"],hr:["human resources","hr","people","talent","recruiting"]};
 function getSector(dept) {
     if (!dept) return "Other";
     const l = dept.toLowerCase();
     for (const [s,kws] of Object.entries(SECTOR_MAP)) { for (const k of kws) if (l.includes(k)) return s.charAt(0).toUpperCase()+s.slice(1); }
     return "Other";
 }
-
-function getJobDomains(j) { return (j._dm?.matchedDomains || []).map(d => d.name); }
-function scoreCls(v) { return v >= 60 ? "high" : v >= 30 ? "mid" : "low"; }
 function faviconUrl(baseUrl) { try { return `https://www.google.com/s2/favicons?domain=${new URL(baseUrl).hostname}&sz=64`; } catch { return ""; } }
 
 // --- INIT ---
@@ -180,12 +144,15 @@ async function init() {
     for (const v of VERSION_HISTORY) { vh += `<div class="version-entry"><h4>v${v.v} <small>(${v.d})</small></h4><ul>${v.c.map(c=>`<li>${c}</li>`).join("")}</ul></div>`; }
     document.getElementById("version-history").innerHTML = vh;
 
-    const [jobsResp, kwResp] = await Promise.all([
+    const [jobsResp, kwResp, fwResp] = await Promise.all([
         fetch("data/jobs.json"),
         fetch("data/keywords.json"),
+        fetch("data/skills_framework.json"),
     ]);
     const data = await jobsResp.json();
     const kwData = await kwResp.json();
+    FRAMEWORK = await fwResp.json();
+
     JOBS = data.jobs || [];
     SEED_META = data;
     KEYWORD_CONFIG = kwData.keywords || [];
@@ -194,19 +161,11 @@ async function init() {
 
     recomputeScores();
     buildTitleOptions();
-    document.getElementById("cv-banner").style.display = hasScorecard() ? "none" : "flex";
-
     initTitleFilter();
     initKeywordFilter();
     buildStatusSelect(document.getElementById("detail-status"));
 
-    // Show Skills page on first visit; otherwise go straight to feed
-    if (localStorage.getItem("jh_my_skills") === null) {
-        showView("skills");
-    } else {
-        showView("feed");
-        applyFilters();
-    }
+    showView("assessment");
 }
 
 function buildStatusSelect(sel) {
@@ -215,21 +174,262 @@ function buildStatusSelect(sel) {
 
 // --- VIEWS ---
 function showView(name) {
-    ["feed","tracker","scorecard","skills"].forEach(v => {
+    ["feed","tracker","assessment","keywords"].forEach(v => {
         document.getElementById("view-"+v).style.display = v===name?"":"none";
         const link = document.querySelector(`.nav-link[data-view="${v}"]`);
         if (link) link.classList.toggle("active", v===name);
     });
     if (name === "tracker") renderKanban();
-    if (name === "scorecard") renderScorecard();
-    if (name === "skills") renderSkillsPage();
+    if (name === "assessment") renderAssessmentPage();
+    if (name === "keywords") renderKeywordsPage();
     if (name === "feed") applyFilters();
 }
 
-// --- SKILLS PAGE ---
+// --- ASSESSMENT PAGE ---
+function renderAssessmentPage() {
+    if (!FRAMEWORK.skills) return;
+
+    // Save open state
+    const openCats = new Set();
+    document.querySelectorAll("#assessment-categories details[open]").forEach(d => openCats.add(d.dataset.cat));
+    const formulaWasOpen = document.getElementById("formula-editor")?.hasAttribute("open");
+
+    const allScores = computeAllSkillScores();
+    const weights = getFormulaWeights();
+    const rawScores = getSkillScores();
+
+    // Role summary
+    const roleScores = computeRoleScores(allScores);
+    let roleSummaryHtml = FRAMEWORK.roles.map(role => {
+        const score = roleScores[role.key];
+        const pct = Math.round(score / 5 * 100);
+        const roleSkills = FRAMEWORK.skills.filter(s => s.roles.includes(role.key));
+        const ratedCount = roleSkills.filter(s => hasAnyScore(rawScores[s.name])).length;
+        return `<div class="role-score-card">
+            <div class="role-score-label">${esc(role.label)}</div>
+            <div class="role-score-value">${score > 0 ? score.toFixed(1) : "—"}</div>
+            <progress value="${pct}" max="100" class="role-progress"></progress>
+            <div class="role-score-sub">${ratedCount}/${roleSkills.length} skills rated</div>
+        </div>`;
+    }).join("");
+    document.getElementById("assessment-role-summary").innerHTML = roleSummaryHtml;
+
+    // Formula editor
+    renderFormulaEditor(weights);
+
+    // Categories
+    const categorized = {};
+    for (const skill of FRAMEWORK.skills) {
+        if (!categorized[skill.category]) categorized[skill.category] = [];
+        categorized[skill.category].push(skill);
+    }
+
+    let categoriesHtml = "";
+    for (const [cat, skills] of Object.entries(categorized).sort()) {
+        const catScore = computeCategoryScore(cat, allScores);
+        const ratedCount = skills.filter(s => hasAnyScore(rawScores[s.name])).length;
+        const isOpen = openCats.has(cat);
+        categoriesHtml += `<details class="skill-category" data-cat="${esc(cat)}"${isOpen?" open":""}>
+            <summary class="skill-category-summary">
+                <span class="skill-cat-name">${esc(cat)}</span>
+                <span class="skill-cat-meta">${ratedCount}/${skills.length} rated</span>
+                <span class="skill-cat-score">${catScore > 0 ? catScore.toFixed(2) : "—"}</span>
+            </summary>
+            <div class="skill-cards-grid">
+                ${skills.map(skill => renderSkillCard(skill, FRAMEWORK.skills.indexOf(skill), rawScores, allScores, weights)).join("")}
+            </div>
+        </details>`;
+    }
+    document.getElementById("assessment-categories").innerHTML = categoriesHtml;
+    if (formulaWasOpen) document.getElementById("formula-editor").open = true;
+}
+
+function renderFormulaEditor(weights) {
+    const totalW = Object.values(weights).reduce((s, v) => s + v, 0);
+    const formulaParts = FRAMEWORK.dimensions.map(d => `${d.label.slice(0,2)}×${(weights[d.key]||1).toFixed(1)}`).join(" + ");
+
+    const slidersHtml = FRAMEWORK.dimensions.map(dim => {
+        const w = weights[dim.key] ?? 1;
+        return `<div class="formula-slider-row">
+            <label class="formula-label" title="${esc(dim.description)}">${esc(dim.label)}</label>
+            <input type="range" min="0" max="2" step="0.1" value="${w}"
+                   oninput="updateWeight('${dim.key}', parseFloat(this.value))"
+                   class="formula-slider">
+            <span class="formula-weight-val" id="fw-${dim.key}">${w.toFixed(1)}</span>
+        </div>`;
+    }).join("");
+
+    document.getElementById("formula-editor-content").innerHTML = `
+        <div class="formula-sliders">${slidersHtml}</div>
+        <div class="formula-preview">score = (${formulaParts}) ÷ ${totalW.toFixed(1)}</div>
+        <button class="outline secondary small" onclick="resetWeights()" style="margin-top:0.5rem">Reset to defaults</button>
+    `;
+}
+
+function updateWeight(dimKey, value) {
+    const weights = getFormulaWeights();
+    weights[dimKey] = value;
+    saveFormulaWeights(weights);
+
+    document.getElementById(`fw-${dimKey}`).textContent = value.toFixed(1);
+
+    const totalW = Object.values(weights).reduce((s, v) => s + v, 0);
+    const formulaParts = FRAMEWORK.dimensions.map(d => `${d.label.slice(0,2)}×${(weights[d.key]||1).toFixed(1)}`).join(" + ");
+    const preview = document.querySelector(".formula-preview");
+    if (preview) preview.textContent = `score = (${formulaParts}) ÷ ${totalW.toFixed(1)}`;
+
+    // Recompute all scores and update DOM
+    const allScores = computeAllSkillScores();
+    const rawScores = getSkillScores();
+
+    document.querySelectorAll("[data-skill-idx]").forEach(card => {
+        const idx = parseInt(card.dataset.skillIdx);
+        const skill = FRAMEWORK.skills[idx];
+        const dimScores = rawScores[skill.name] || {};
+        const newScore = computeSkillScore(dimScores, weights);
+        const hasSc = hasAnyScore(dimScores);
+        const badge = card.querySelector(".skill-total-score");
+        if (badge) {
+            badge.textContent = hasSc ? newScore.toFixed(2) : "—";
+            badge.className = `skill-total-score ${hasSc ? "rated" : "unrated"}`;
+        }
+    });
+
+    const cats = [...new Set(FRAMEWORK.skills.map(s => s.category))];
+    for (const cat of cats) {
+        const el = document.querySelector(`[data-cat="${CSS.escape(cat)}"] .skill-cat-score`);
+        if (el) {
+            const sc = computeCategoryScore(cat, allScores);
+            el.textContent = sc > 0 ? sc.toFixed(2) : "—";
+        }
+    }
+
+    const roleScores = computeRoleScores(allScores);
+    updateRoleSummary(roleScores, allScores, rawScores);
+}
+
+function resetWeights() {
+    const defaults = {};
+    for (const d of FRAMEWORK.dimensions) defaults[d.key] = 1.0;
+    saveFormulaWeights(defaults);
+    renderAssessmentPage();
+    document.getElementById("formula-editor").open = true;
+}
+
+function updateRoleSummary(roleScores, allComputedScores, rawScores) {
+    FRAMEWORK.roles.forEach(role => {
+        const score = roleScores[role.key];
+        const pct = Math.round(score / 5 * 100);
+        const roleSkills = FRAMEWORK.skills.filter(s => s.roles.includes(role.key));
+        const ratedCount = roleSkills.filter(s => hasAnyScore(rawScores[s.name])).length;
+        const card = document.querySelector(`.role-score-card:nth-child(${FRAMEWORK.roles.indexOf(role)+1})`);
+        if (card) {
+            card.querySelector(".role-score-value").textContent = score > 0 ? score.toFixed(1) : "—";
+            const prog = card.querySelector(".role-progress");
+            if (prog) prog.value = pct;
+            card.querySelector(".role-score-sub").textContent = `${ratedCount}/${roleSkills.length} skills rated`;
+        }
+    });
+}
+
+function renderSkillCard(skill, globalIdx, rawScores, allComputedScores, weights) {
+    const dimScores = rawScores[skill.name] || {};
+    const totalScore = allComputedScores[skill.name] || 0;
+    const hasScore = hasAnyScore(dimScores);
+    const sid = skillId(skill.name);
+
+    const dimRowsHtml = FRAMEWORK.dimensions.map(dim => {
+        const val = dimScores[dim.key] || 0;
+        const desc = dim.levels[String(val)] || "";
+        const buttons = [0,1,2,3,4,5].map(n => {
+            const sel = n === val ? "dim-btn-selected" : "";
+            return `<button class="dim-btn ${sel}" data-val="${n}" onclick="setDimScore(${globalIdx},'${dim.key}',${n})">${n}</button>`;
+        }).join("");
+        return `<div class="skill-dim-row" data-dim="${dim.key}">
+            <span class="dim-label" title="${esc(dim.description)}">${esc(dim.label)}</span>
+            <div class="dim-buttons">${buttons}</div>
+            <span class="dim-desc" id="dd-${sid}-${dim.key}">${esc(desc)}</span>
+        </div>`;
+    }).join("");
+
+    return `<div class="skill-card" id="scard-${sid}" data-skill-idx="${globalIdx}">
+        <div class="skill-card-header">
+            <div class="skill-card-title">
+                <span class="skill-card-name">${esc(skill.name)}</span>
+                <span class="skill-card-desc">${esc(skill.description)}</span>
+            </div>
+            <div class="skill-card-meta">
+                ${skill.roles.map(r => `<span class="role-badge role-${r.toLowerCase()}">${r}</span>`).join("")}
+                <span class="skill-total-score ${hasScore ? "rated" : "unrated"}">${hasScore ? totalScore.toFixed(2) : "—"}</span>
+            </div>
+        </div>
+        <div class="skill-dim-rows">${dimRowsHtml}</div>
+    </div>`;
+}
+
+function setDimScore(skillIdx, dimKey, value) {
+    const skill = FRAMEWORK.skills[skillIdx];
+    const allScores = getSkillScores();
+    if (!allScores[skill.name]) allScores[skill.name] = {};
+    allScores[skill.name][dimKey] = value;
+    saveSkillScores(allScores);
+
+    const weights = getFormulaWeights();
+    const sid = skillId(skill.name);
+
+    // Update button states
+    const dimRow = document.querySelector(`#scard-${sid} [data-dim="${dimKey}"]`);
+    if (dimRow) {
+        dimRow.querySelectorAll(".dim-btn").forEach(btn => {
+            btn.classList.toggle("dim-btn-selected", parseInt(btn.dataset.val) === value);
+        });
+        const desc = dimRow.querySelector(".dim-desc");
+        const dim = FRAMEWORK.dimensions.find(d => d.key === dimKey);
+        if (desc && dim) desc.textContent = dim.levels[String(value)] || "";
+    }
+
+    // Update skill score badge
+    const dimScores = allScores[skill.name];
+    const newScore = computeSkillScore(dimScores, weights);
+    const hasScore = hasAnyScore(dimScores);
+    const badge = document.querySelector(`#scard-${sid} .skill-total-score`);
+    if (badge) {
+        badge.textContent = hasScore ? newScore.toFixed(2) : "—";
+        badge.className = `skill-total-score ${hasScore ? "rated" : "unrated"}`;
+    }
+
+    // Update category score
+    const allComputed = computeAllSkillScores();
+    const catEl = document.querySelector(`[data-cat="${CSS.escape(skill.category)}"] .skill-cat-score`);
+    if (catEl) {
+        const catScore = computeCategoryScore(skill.category, allComputed);
+        catEl.textContent = catScore > 0 ? catScore.toFixed(2) : "—";
+    }
+    // Update rated count for category
+    const catMetaEl = document.querySelector(`[data-cat="${CSS.escape(skill.category)}"] .skill-cat-meta`);
+    if (catMetaEl) {
+        const catSkills = FRAMEWORK.skills.filter(s => s.category === skill.category);
+        const rawSc = getSkillScores();
+        const ratedCount = catSkills.filter(s => hasAnyScore(rawSc[s.name])).length;
+        catMetaEl.textContent = `${ratedCount}/${catSkills.length} rated`;
+    }
+
+    // Update role summary
+    const roleScores = computeRoleScores(allComputed);
+    updateRoleSummary(roleScores, allComputed, allScores);
+
+    // Recompute skills match if filter active
+    const thresholdEl = document.getElementById("f-min-skills");
+    if (thresholdEl) {
+        const threshold = parseFloat(thresholdEl.value || "0");
+        if (threshold > 0) recomputeSkillsMatch(threshold);
+    }
+}
+
+// --- KEYWORDS PAGE ---
 let mySkillsState = new Set();
 
-function renderSkillsPage() {
+function renderKeywordsPage() {
     mySkillsState = getMySkills();
     const kwCounts = {};
     for (const kw of KEYWORD_CONFIG) {
@@ -257,7 +457,6 @@ function clearMySkills() {
 
 function saveAndGoFeed() {
     saveMySkills(mySkillsState);
-    // Pre-populate keyword filter with selected skills
     selectedKeywords = new Set(mySkillsState);
     renderKeywordChips();
     showView("feed");
@@ -273,9 +472,7 @@ function buildTitleOptions() {
         if (!counts[key]) counts[key] = { label: clean, count: 0 };
         counts[key].count++;
     }
-    TITLE_OPTIONS = Object.values(counts)
-        .filter(t => t.count >= 2)
-        .sort((a, b) => b.count - a.count);
+    TITLE_OPTIONS = Object.values(counts).filter(t => t.count >= 2).sort((a, b) => b.count - a.count);
 }
 
 function cleanTitle(raw) {
@@ -286,7 +483,6 @@ function cleanTitle(raw) {
     t = t.replace(/\*\s*in\b/g, "");
     t = t.replace(/\s*[|@—–]\s*.{3,}$/, "");
     t = t.replace(/\s+(?:bei|at|für|for)\s+[A-Z].{2,}$/, "");
-    t = t.replace(/^\s*\((?:Senior|Junior|Lead|Staff|Principal|Head of)\)\s*/i, "");
     t = t.replace(/^\s*(?:Senior|Junior|Lead|Principal|Staff|Head of|Sr\.|Jr\.)\s+/i, "");
     t = t.replace(/\s{2,}/g, " ").replace(/\s*[-–—]\s*$/, "").trim();
     return t;
@@ -342,21 +538,13 @@ function initTitleFilter() {
     input.addEventListener("blur", () => setTimeout(() => dropdown.style.display = "none", 150));
     input.addEventListener("keydown", (e) => {
         if (e.key === "Enter" && input.value.trim()) {
-            e.preventDefault();
-            selectedTitles.add(input.value.trim());
-            input.value = "";
-            dropdown.style.display = "none";
-            render();
-            applyFilters();
+            e.preventDefault(); selectedTitles.add(input.value.trim()); input.value = "";
+            dropdown.style.display = "none"; render(); applyFilters();
         }
         if (e.key === "Backspace" && !input.value && selectedTitles.size) {
-            const last = Array.from(selectedTitles).pop();
-            selectedTitles.delete(last);
-            render();
-            applyFilters();
+            const last = Array.from(selectedTitles).pop(); selectedTitles.delete(last); render(); applyFilters();
         }
     });
-
     render();
 }
 
@@ -365,15 +553,10 @@ let selectedKeywords = new Set();
 let kwDropdownOpen = false;
 
 function initKeywordFilter() {
-    document.addEventListener("click", (e) => {
-        if (!e.target.closest("#kw-filter")) closeKwDropdown();
-    });
+    document.addEventListener("click", (e) => { if (!e.target.closest("#kw-filter")) closeKwDropdown(); });
 }
 
-function toggleKwDropdown() {
-    if (kwDropdownOpen) closeKwDropdown();
-    else openKwDropdown();
-}
+function toggleKwDropdown() { kwDropdownOpen ? closeKwDropdown() : openKwDropdown(); }
 
 function openKwDropdown() {
     kwDropdownOpen = true;
@@ -386,16 +569,12 @@ function openKwDropdown() {
     dropdown.style.display = "block";
 }
 
-function closeKwDropdown() {
-    kwDropdownOpen = false;
-    document.getElementById("kw-dropdown").style.display = "none";
-}
+function closeKwDropdown() { kwDropdownOpen = false; document.getElementById("kw-dropdown").style.display = "none"; }
 
 function toggleKeyword(kw) {
     if (selectedKeywords.has(kw)) selectedKeywords.delete(kw);
     else selectedKeywords.add(kw);
-    renderKeywordChips();
-    applyFilters();
+    renderKeywordChips(); applyFilters();
 }
 
 function renderKeywordChips() {
@@ -408,23 +587,33 @@ function renderKeywordChips() {
             e.stopPropagation();
             selectedKeywords.delete(x.dataset.kw);
             renderKeywordChips();
-            // Uncheck in dropdown if open
-            const dropdown = document.getElementById("kw-dropdown");
-            const cb = dropdown.querySelector(`input[onchange*="${esc(x.dataset.kw)}"]`);
+            const cb = document.querySelector(`#kw-dropdown input[onchange*="${esc(x.dataset.kw)}"]`);
             if (cb) cb.checked = false;
             applyFilters();
         };
     });
-    document.getElementById("kw-toggle").textContent = selectedKeywords.size
-        ? `+ More keywords ▾`
-        : `+ Add keyword filter ▾`;
+    document.getElementById("kw-toggle").textContent = selectedKeywords.size ? `+ More keywords ▾` : `+ Add keyword filter ▾`;
+}
+
+// --- MIN SKILLS FILTER ---
+function onMinSkillsChange(val) {
+    const threshold = parseFloat(val || "0");
+    recomputeSkillsMatch(threshold);
+    const hint = document.getElementById("min-skills-hint");
+    if (hint && threshold > 0 && FRAMEWORK.skills) {
+        const computedScores = computeAllSkillScores();
+        const qualifying = FRAMEWORK.skills.filter(s => (computedScores[s.name] || 0) >= threshold);
+        hint.textContent = `${qualifying.length} skill${qualifying.length !== 1 ? "s" : ""} qualify at ≥ ${threshold.toFixed(1)}`;
+    } else if (hint) {
+        hint.textContent = "Only show jobs mentioning skills you rated ≥ this value";
+    }
+    applyFilters();
 }
 
 // --- FILTERING ---
 function parseExclude(raw) {
     if (!raw) return [];
-    const matches = [...raw.matchAll(/"([^"]+)"|([^,]+)/g)];
-    return matches.map(m => (m[1]||m[2]).trim().toLowerCase()).filter(Boolean);
+    return [...raw.matchAll(/"([^"]+)"|([^,]+)/g)].map(m => (m[1]||m[2]).trim().toLowerCase()).filter(Boolean);
 }
 
 function applyFilters() {
@@ -440,6 +629,7 @@ function applyFilters() {
     const dateFrom = document.getElementById("f-date-from").value;
     const dateTo = document.getElementById("f-date-to").value;
     const sort = document.getElementById("f-sort").value;
+    const minSkills = parseFloat(document.getElementById("f-min-skills").value || "0");
 
     const uj = getUserJobs();
     let filtered = JOBS.filter(j => {
@@ -458,6 +648,7 @@ function applyFilters() {
             const jkw = new Set((j._matchedKw||[]).map(k => k.toLowerCase()));
             if (![...selectedKeywords].every(k => jkw.has(k.toLowerCase()))) return false;
         }
+        if (minSkills > 0 && (j._skillsMatch || 0) <= 0) return false;
         if (excludeTerms.length) {
             const searchable = `${j.title} ${j.description||""} ${j.department||""}`.toLowerCase();
             if (excludeTerms.some(t => searchable.includes(t))) return false;
@@ -470,9 +661,7 @@ function applyFilters() {
     if (sort === "date_asc") filtered.sort((a,b) => (a.first_seen||"").localeCompare(b.first_seen||""));
     else if (sort === "company_asc") filtered.sort((a,b) => (a.source||"").localeCompare(b.source||""));
     else if (sort === "kw_desc") filtered.sort((a,b) => (b._kwCount||0)-(a._kwCount||0));
-    else if (sort === "domain_desc") filtered.sort((a,b) => (b._domainScore||0)-(a._domainScore||0));
-    else if (sort === "must_desc") filtered.sort((a,b) => (b._mustScore||0)-(a._mustScore||0));
-    else if (sort === "nice_desc") filtered.sort((a,b) => (b._niceScore||0)-(a._niceScore||0));
+    else if (sort === "skills_desc") filtered.sort((a,b) => (b._skillsMatch||0)-(a._skillsMatch||0));
     else filtered.reverse();
 
     renderSectorTabs(filtered);
@@ -480,7 +669,7 @@ function applyFilters() {
 }
 
 function clearFilters() {
-    ["f-location","f-company","f-dept","f-exclude","f-date-from","f-date-to"].forEach(id => document.getElementById(id).value = "");
+    ["f-location","f-company","f-dept","f-exclude","f-date-from","f-date-to","f-min-skills"].forEach(id => document.getElementById(id).value = "");
     selectedTitles.clear();
     document.getElementById("title-chips").innerHTML = "";
     document.getElementById("title-search").value = "";
@@ -488,86 +677,46 @@ function clearFilters() {
     document.getElementById("f-sort").value = "date_desc";
     selectedKeywords.clear();
     renderKeywordChips();
+    recomputeSkillsMatch(0);
+    const hint = document.getElementById("min-skills-hint");
+    if (hint) hint.textContent = "Only show jobs mentioning skills you rated ≥ this value";
     applyFilters();
 }
 
-// --- DOMAIN / SECTOR TABS ---
+// --- SECTOR TABS ---
 let currentSector = "all";
 function renderSectorTabs(jobs) {
-    const sc = getScorecard();
-    let html = "";
-    if (!sc.length) {
-        const sectors = {};
-        for (const j of jobs) { const s = getSector(j.department); sectors[s] = (sectors[s]||0)+1; }
-        const names = Object.keys(sectors).sort();
-        html = `<button class="tab-btn ${currentSector==="all"?"active":""}" onclick="filterSector('all')">All (${jobs.length})</button>`;
-        for (const s of names) html += `<button class="tab-btn ${currentSector===s?"active":""}" onclick="filterSector('${s}')">${s} (${sectors[s]})</button>`;
-    } else {
-        const domainCounts = {};
-        let unknownCount = 0;
-        for (const j of jobs) {
-            const domains = getJobDomains(j);
-            if (!domains.length) { unknownCount++; }
-            else { for (const d of domains) { domainCounts[d] = (domainCounts[d]||0)+1; } }
-        }
-        const names = Object.keys(domainCounts).sort();
-        html = `<button class="tab-btn ${currentSector==="all"?"active":""}" onclick="filterSector('all')">All (${jobs.length})</button>`;
-        for (const s of names) html += `<button class="tab-btn ${currentSector===s?"active":""}" onclick="filterSector('${esc(s)}')">${esc(s)} (${domainCounts[s]})</button>`;
-        if (unknownCount) html += `<button class="tab-btn ${currentSector==="Unknown"?"active":""}" onclick="filterSector('Unknown')">Unknown (${unknownCount})</button>`;
-    }
+    const sectors = {};
+    for (const j of jobs) { const s = getSector(j.department); sectors[s] = (sectors[s]||0)+1; }
+    const names = Object.keys(sectors).sort();
+    let html = `<button class="tab-btn ${currentSector==="all"?"active":""}" onclick="filterSector('all')">All (${jobs.length})</button>`;
+    for (const s of names) html += `<button class="tab-btn ${currentSector===s?"active":""}" onclick="filterSector('${s}')">${s} (${sectors[s]})</button>`;
     document.getElementById("sector-tabs").innerHTML = html;
 }
-
 function filterSector(s) { currentSector = s; applyFilters(); }
 
 // --- RENDER JOBS ---
 function renderJobs(jobs) {
     const uj = getUserJobs();
-    const sc = getScorecard();
+    const minSkills = parseFloat(document.getElementById("f-min-skills").value || "0");
     const list = document.getElementById("job-list");
     let html = "";
     let count = 0;
     for (let i = 0; i < jobs.length; i++) {
         const j = jobs[i];
-        if (currentSector !== "all") {
-            if (sc.length) {
-                const domains = getJobDomains(j);
-                if (currentSector === "Unknown" && domains.length) continue;
-                if (currentSector !== "Unknown" && !domains.includes(currentSector)) continue;
-            } else {
-                if (getSector(j.department) !== currentSector) continue;
-            }
-        }
+        if (currentSector !== "all" && getSector(j.department) !== currentSector) continue;
         const st = uj[j.url]?.status || "new";
         const fav = faviconUrl(j.source_url||"");
         const initial = (j.source||"?")[0];
-        const dm = j._dm;
         count++;
 
-        // Score badges row
         let scoresHtml = "";
-        if (dm) {
-            const badges = [];
-            if (sc.length) {
-                if (dm.domainScore) badges.push(`<span class="match-badge match-${scoreCls(dm.domainScore)}" title="Domain match">D ${dm.domainScore}%</span>`);
-                if (dm.mustScore) badges.push(`<span class="match-badge match-${scoreCls(dm.mustScore)}" title="Must-have match">M ${dm.mustScore}%</span>`);
-                if (dm.niceScore) badges.push(`<span class="match-badge match-${scoreCls(dm.niceScore)}" title="Nice-to-have match">N ${dm.niceScore}%</span>`);
-            }
-            if (dm.bilingual) badges.push(`<span class="tag tag-bilingual">🌐 Bilingual</span>`);
-            if (badges.length) scoresHtml += `<div class="score-row">${badges.join("")}</div>`;
-
-            if (sc.length && (dm.matchedDomains.length || dm.matchedMusts.length || dm.matchedNices.length)) {
-                let bd = `<details class="match-expand"><summary>Match breakdown</summary><div class="match-breakdown-inner">`;
-                if (dm.matchedDomains.length) bd += `<div class="mb-section"><strong>Domains:</strong> ${dm.matchedDomains.map(d => `<span class="kw-match">${esc(d.name)}</span>`).join(" ")}</div>`;
-                if (dm.matchedMusts.length) bd += `<div class="mb-section"><strong>Must-haves:</strong> ${dm.matchedMusts.map(s => `<span class="kw-match">${esc(s.skill)} <small>${s.rating}/5</small></span>`).join(" ")}</div>`;
-                if (dm.matchedNices.length) bd += `<div class="mb-section"><strong>Nice-to-haves:</strong> ${dm.matchedNices.map(s => `<span class="kw-match">${esc(s.skill)} <small>${s.rating}/5</small></span>`).join(" ")}</div>`;
-                if (dm.missingSkills.length) bd += `<div class="mb-section"><em class="mb-missing-label">Not mentioned (${dm.missingSkills.length} of your skills):</em> ${dm.missingSkills.map(s => `<span class="kw-miss">${esc(s.skill)}</span>`).join(" ")}</div>`;
-                bd += `</div></details>`;
-                scoresHtml += bd;
-            }
+        if (j._bilingual) scoresHtml += `<span class="tag tag-bilingual">🌐 Bilingual</span>`;
+        if (j._skillsMatch > 0) {
+            scoresHtml += `<span class="tag tag-skills-match">Skills match: ${j._skillsMatch}</span>`;
         }
+        if (scoresHtml) scoresHtml = `<div class="score-row">${scoresHtml}</div>`;
 
-        // Keyword chips row
         let kwHtml = "";
         if (j._matchedKw && j._matchedKw.length) {
             const chips = j._matchedKw.map(kw => {
@@ -624,11 +773,7 @@ function sanitizeHtml(raw) {
             if (child.nodeType === 3) continue;
             if (child.nodeType !== 1) { child.remove(); continue; }
             const tag = child.tagName.toLowerCase();
-            if (!ALLOWED.has(tag)) {
-                while (child.firstChild) child.parentNode.insertBefore(child.firstChild, child);
-                child.remove();
-                continue;
-            }
+            if (!ALLOWED.has(tag)) { while (child.firstChild) child.parentNode.insertBefore(child.firstChild, child); child.remove(); continue; }
             const attrs = Array.from(child.attributes);
             for (const attr of attrs) {
                 if (tag === "a" && attr.name === "href" && (attr.value.startsWith("http") || attr.value.startsWith("/"))) continue;
@@ -648,11 +793,7 @@ function toggleFav(url) {
     const cur = uj[url]?.status || "new";
     setJobStatus(url, cur === "favorite" ? "new" : "favorite");
 }
-
-function setJobStatus(url, status) {
-    setUserJob(url, {status});
-    applyFilters();
-}
+function setJobStatus(url, status) { setUserJob(url, {status}); applyFilters(); }
 
 // --- DETAIL MODAL ---
 function openDetail(idx) {
@@ -675,11 +816,7 @@ function openDetail(idx) {
     if (j.salary_text) meta += ` · <span class="tag tag-salary">${esc(j.salary_text)}</span>`;
     document.getElementById("detail-meta").innerHTML = meta;
 
-    const dm = j._dm || detailedMatch(j.description || "");
-    const sc = getScorecard();
     let kwHtml = "";
-
-    // Keyword chips in modal
     if (j._matchedKw && j._matchedKw.length) {
         const chips = j._matchedKw.map(kw => {
             const isSelected = selectedKeywords.has(kw);
@@ -688,39 +825,18 @@ function openDetail(idx) {
         kwHtml += `<div class="detail-kw-row"><strong>Keywords matched:</strong> <span class="kw-chips-row" style="display:inline-flex">${chips}</span></div>`;
     }
 
-    if (dm.bilingual) {
-        kwHtml += `<div class="detail-bilingual"><span class="tag tag-bilingual">🌐 Requires German &amp; English</span></div>`;
-    }
+    if (j._bilingual) kwHtml += `<div class="detail-bilingual"><span class="tag tag-bilingual">🌐 Requires German &amp; English</span></div>`;
 
-    if (sc.length) {
-        kwHtml += `<div class="detail-scores">
-            <span class="match-badge match-${scoreCls(dm.domainScore)}" title="Domain match">Domain ${dm.domainScore}%</span>
-            <span class="match-badge match-${scoreCls(dm.mustScore)}" title="Must-have match">Must-haves ${dm.mustScore}%</span>
-            <span class="match-badge match-${scoreCls(dm.niceScore)}" title="Nice-to-have match">Nice-to-haves ${dm.niceScore}%</span>
-        </div>`;
-
-        if (dm.matchedDomains.length) {
-            kwHtml += `<details class="match-section" open><summary><strong>Domain match</strong> — ${dm.matchedDomains.length} domain${dm.matchedDomains.length>1?"s":""}</summary><div class="mb-skills">`;
-            for (const d of dm.matchedDomains) kwHtml += `<span class="kw-match">${esc(d.name)} <small>${d.skills.length} skill${d.skills.length>1?"s":""}</small></span>`;
-            kwHtml += `</div></details>`;
-        }
-
-        if (dm.matchedMusts.length) {
-            kwHtml += `<details class="match-section" open><summary><strong>Must-haves matched</strong> — ${dm.matchedMusts.length} of your skills</summary><div class="mb-skills">`;
-            for (const s of dm.matchedMusts) kwHtml += `<span class="kw-match">${esc(s.skill)} <small>${s.rating}/5</small></span>`;
-            kwHtml += `</div></details>`;
-        }
-
-        if (dm.matchedNices.length) {
-            kwHtml += `<details class="match-section"><summary><strong>Nice-to-haves matched</strong> — ${dm.matchedNices.length} of your skills</summary><div class="mb-skills">`;
-            for (const s of dm.matchedNices) kwHtml += `<span class="kw-match">${esc(s.skill)} <small>${s.rating}/5</small></span>`;
-            kwHtml += `</div></details>`;
-        }
-
-        if (dm.missingSkills.length) {
-            kwHtml += `<details class="match-section"><summary>Your skills not mentioned — ${dm.missingSkills.length}</summary><div class="mb-skills">`;
-            for (const s of dm.missingSkills) kwHtml += `<span class="kw-miss">${esc(s.skill)}</span>`;
-            kwHtml += `</div></details>`;
+    const minSkills = parseFloat(document.getElementById("f-min-skills")?.value || "0");
+    if (j._skillsMatch > 0 || minSkills > 0) {
+        const computedScores = computeAllSkillScores();
+        const qualifyingSkills = minSkills > 0
+            ? FRAMEWORK.skills.filter(s => (computedScores[s.name] || 0) >= minSkills)
+            : FRAMEWORK.skills.filter(s => hasAnyScore(getSkillScores()[s.name]));
+        const text = ((j.title||"") + " " + (j.description||"")).toLowerCase();
+        const matched = qualifyingSkills.filter(s => text.includes(s.name.toLowerCase()));
+        if (matched.length) {
+            kwHtml += `<details class="match-section" open><summary><strong>Skills match: ${matched.length}</strong>${minSkills > 0 ? ` (skills rated ≥ ${minSkills.toFixed(1)})` : ""}</summary><div class="mb-skills">${matched.map(s => `<span class="kw-match">${esc(s.name)} <small>${(computedScores[s.name]||0).toFixed(1)}</small></span>`).join("")}</div></details>`;
         }
     }
 
@@ -732,41 +848,27 @@ function openDetail(idx) {
 function changeDetailStatus() {
     if (currentDetailIdx === null) return;
     const j = JOBS[currentDetailIdx];
-    const status = document.getElementById("detail-status").value;
-    const notes = document.getElementById("detail-notes").value;
-    setUserJob(j.url, {status, notes});
+    setUserJob(j.url, {status: document.getElementById("detail-status").value, notes: document.getElementById("detail-notes").value});
 }
 
 function saveDetailNotes() {
     if (currentDetailIdx === null) return;
-    const j = JOBS[currentDetailIdx];
-    const notes = document.getElementById("detail-notes").value;
-    setUserJob(j.url, {notes});
+    setUserJob(JOBS[currentDetailIdx].url, {notes: document.getElementById("detail-notes").value});
 }
 
 // --- KANBAN ---
 function renderKanban() {
     const uj = getUserJobs();
-    const sc = getScorecard();
     const cols = {};
     for (const c of TRACKER_COLS) cols[c] = [];
-    for (const j of JOBS) {
-        const st = uj[j.url]?.status;
-        if (st && cols[st]) cols[st].push(j);
-    }
+    for (const j of JOBS) { const st = uj[j.url]?.status; if (st && cols[st]) cols[st].push(j); }
 
     let html = "";
     for (const col of TRACKER_COLS) {
         html += `<div class="kanban-col"><div class="kanban-col-header"><span class="kanban-col-title status-${col}">${col.charAt(0).toUpperCase()+col.slice(1)}</span><span class="kanban-col-count">${cols[col].length}</span></div><div class="kanban-cards">`;
         for (const j of cols[col]) {
-            const dm = j._dm;
-            let scores = "";
-            if (sc.length && dm) {
-                if (dm.domainScore) scores += `<span class="match-badge match-${scoreCls(dm.domainScore)}">D${dm.domainScore}%</span> `;
-                if (dm.mustScore) scores += `<span class="match-badge match-${scoreCls(dm.mustScore)}">M${dm.mustScore}%</span> `;
-                if (dm.niceScore) scores += `<span class="match-badge match-${scoreCls(dm.niceScore)}">N${dm.niceScore}%</span>`;
-            }
             const kwChips = (j._matchedKw||[]).slice(0,3).map(kw => `<span class="tag tag-kw" style="font-size:0.65rem;padding:0.05rem 0.3rem">${esc(kw)}</span>`).join("");
+            const skillsChip = j._skillsMatch > 0 ? `<span class="tag tag-skills-match" style="font-size:0.65rem">Skills: ${j._skillsMatch}</span>` : "";
             html += `<div class="kanban-card" onclick="openDetail(${JOBS.indexOf(j)})">
                 <div class="kc-title">${esc(j.title.slice(0,40))}${j.title.length>40?"...":""}</div>
                 <div class="kc-company">${esc(j.source)}</div>
@@ -774,9 +876,8 @@ function renderKanban() {
                     ${j.location?`<span>${esc(j.location.slice(0,15))}${j.location.length>15?"…":""}</span>`:""}
                     ${j.work_mode?`<span class="tag tag-workmode">${esc(j.work_mode)}</span>`:""}
                 </div>
-                ${scores?`<div class="kc-scores">${scores}</div>`:""}
-                ${kwChips?`<div class="kc-scores" style="margin-top:0.2rem">${kwChips}</div>`:""}
-                ${dm?.bilingual?`<span class="tag tag-bilingual" style="font-size:0.65rem">🌐 Bilingual</span>`:""}
+                ${kwChips||skillsChip?`<div class="kc-scores">${skillsChip}${kwChips}</div>`:""}
+                ${j._bilingual?`<span class="tag tag-bilingual" style="font-size:0.65rem">🌐 Bilingual</span>`:""}
             </div>`;
         }
         html += `</div></div>`;
@@ -784,104 +885,15 @@ function renderKanban() {
     document.getElementById("kanban").innerHTML = html;
 }
 
-// --- SCORECARD ---
-function renderScorecard() {
-    const sc = getScorecard();
-    const el = document.getElementById("sc-current");
-    if (sc.length) {
-        const cats = {};
-        for (const s of sc) { const c = s.category || "Other"; if (!cats[c]) cats[c] = []; cats[c].push(s); }
-        let html = `<article><header><h4>Current Scorecard (${sc.length} skills)</h4></header><div class="overflow-auto"><table role="grid"><thead><tr><th>Category</th><th>Skill</th><th>Rating</th></tr></thead><tbody>`;
-        for (const [cat, skills] of Object.entries(cats).sort()) {
-            for (const s of skills) html += `<tr><td>${esc(cat)}</td><td>${esc(s.skill)}</td><td>${"★".repeat(s.rating)}${"☆".repeat(5-s.rating)}</td></tr>`;
-        }
-        html += `</tbody></table></div></article>`;
-        el.innerHTML = html;
-
-        const rows = document.getElementById("sc-rows");
-        rows.innerHTML = "";
-        for (const s of sc) addScorecardRow(s.category, s.skill, s.rating);
-    } else {
-        el.innerHTML = "";
-        document.getElementById("sc-rows").innerHTML = "";
-        addScorecardRow(); addScorecardRow(); addScorecardRow();
-    }
-}
-
-function addScorecardRow(cat, skill, rating) {
-    const rows = document.getElementById("sc-rows");
-    const row = document.createElement("div");
-    row.className = "sc-row";
-    row.innerHTML = `<input type="text" placeholder="Category" value="${esc(cat||"")}"><input type="text" placeholder="Skill name" value="${esc(skill||"")}"><select>${[1,2,3,4,5].map(n=>`<option value="${n}" ${n===(rating||3)?"selected":""}>${n}</option>`).join("")}</select><button class="outline small" onclick="this.parentElement.remove()">✕</button>`;
-    rows.appendChild(row);
-}
-
-function saveEditorScorecard() {
-    const rows = document.querySelectorAll("#sc-rows .sc-row");
-    const sc = [];
-    for (const row of rows) {
-        const inputs = row.querySelectorAll("input");
-        const sel = row.querySelector("select");
-        const cat = inputs[0].value.trim();
-        const skill = inputs[1].value.trim();
-        const rating = parseInt(sel.value) || 3;
-        if (skill) sc.push({ category: cat, skill, rating });
-    }
-    if (!sc.length) { alert("Add at least one skill."); return; }
-    saveScorecard(sc);
-    recomputeScores();
-    document.getElementById("cv-banner").style.display = "none";
-    renderScorecard();
-    alert(`Scorecard saved with ${sc.length} skills. Match scores updated.`);
-}
-
-function importScorecard() {
-    const raw = document.getElementById("sc-paste").value.trim();
-    if (!raw) return;
-    const sc = [];
-    const lines = raw.split("\n");
-    for (const line of lines) {
-        const clean = line.replace(/^\||\|$/g, "").trim();
-        if (!clean || /^[-:|\s]+$/.test(clean) || /category/i.test(clean) && /skill/i.test(clean)) continue;
-        const parts = clean.split(/[|\t]/).map(p => p.trim()).filter(Boolean);
-        if (parts.length >= 3) {
-            const rating = parseInt(parts[parts.length - 1]);
-            if (rating >= 1 && rating <= 5) {
-                sc.push({ category: parts[0], skill: parts[1], rating });
-            }
-        } else if (parts.length === 2) {
-            const rating = parseInt(parts[1]);
-            if (rating >= 1 && rating <= 5) {
-                sc.push({ category: "", skill: parts[0], rating });
-            }
-        }
-    }
-    if (!sc.length) { alert("Could not parse any skills. Use format: Category | Skill | Rating"); return; }
-    saveScorecard(sc);
-    recomputeScores();
-    document.getElementById("cv-banner").style.display = "none";
-    document.getElementById("sc-paste").value = "";
-    renderScorecard();
-    alert(`Imported ${sc.length} skills. Match scores updated.`);
-}
-
-function clearScorecard() {
-    localStorage.removeItem("jh_scorecard");
-    for (const j of JOBS) { j._dm = null; j._domainScore = 0; j._mustScore = 0; j._niceScore = 0; j._bilingual = false; }
-    document.getElementById("cv-banner").style.display = "flex";
-    renderScorecard();
-    applyFilters();
-}
-
 // --- CSV EXPORT ---
 function exportCSV() {
     const uj = getUserJobs();
     const tracked = JOBS.filter(j => { const s = uj[j.url]?.status; return s && TRACKER_COLS.includes(s); });
     if (!tracked.length) { alert("No tracked jobs to export."); return; }
-    let csv = "Title,Company,URL,Location,Work Mode,Employment Type,Department,Salary,Status,Notes,Keywords Matched,Domain%,Must%,Nice%,Bilingual\n";
+    let csv = "Title,Company,URL,Location,Work Mode,Employment Type,Department,Salary,Status,Notes,Keywords Matched,Skills Match,Bilingual\n";
     for (const j of tracked) {
         const u = uj[j.url]||{};
-        csv += [j.title,j.source,j.url,j.location,j.work_mode,j.employment_type,j.department,j.salary_text,u.status,u.notes||"",(j._matchedKw||[]).join("; "),j._domainScore||0,j._mustScore||0,j._niceScore||0,j._bilingual?"yes":"no"].map(v=>`"${String(v||"").replace(/"/g,'""')}"`).join(",")+"\n";
+        csv += [j.title,j.source,j.url,j.location,j.work_mode,j.employment_type,j.department,j.salary_text,u.status,u.notes||"",(j._matchedKw||[]).join("; "),j._skillsMatch||0,j._bilingual?"yes":"no"].map(v=>`"${String(v||"").replace(/"/g,'""')}"`).join(",")+"\n";
     }
     const blob = new Blob([csv], {type:"text/csv"});
     const a = document.createElement("a");

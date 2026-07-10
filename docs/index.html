@@ -14,27 +14,36 @@
             <li><a href="#" class="version-link" onclick="document.getElementById('version-modal').showModal(); return false;" id="version-display"></a></li>
         </ul>
         <ul>
-            <li><a href="#" onclick="showView('skills')" class="nav-link" data-view="skills">Skills</a></li>
+            <li><a href="#" onclick="showView('assessment')" class="nav-link" data-view="assessment">Skills</a></li>
+            <li><a href="#" onclick="showView('keywords')" class="nav-link" data-view="keywords">Keywords</a></li>
             <li><a href="#" onclick="showView('feed')" class="nav-link" data-view="feed">Feed</a></li>
             <li><a href="#" onclick="showView('tracker')" class="nav-link" data-view="tracker">Tracker</a></li>
-            <li><a href="#" onclick="showView('scorecard')" class="nav-link" data-view="scorecard">Scorecard</a></li>
         </ul>
     </nav>
 
     <div class="container seed-info" id="seed-info"></div>
 
     <main class="container">
-        <!-- CV Banner -->
-        <div class="cv-banner" id="cv-banner" style="display:none">
-            <span>Add your skills scorecard to get domain/must-have/nice-to-have match scores.</span>
-            <a href="#" onclick="showView('scorecard')" role="button" class="outline small">Add Scorecard</a>
+
+        <!-- ASSESSMENT VIEW -->
+        <div id="view-assessment" style="display:none">
+            <div class="assessment-header">
+                <h2>Skills Assessment</h2>
+                <p class="skills-subtitle">Rate yourself on each skill dimension. Your scores drive the "Skills match" filter on the Feed.</p>
+            </div>
+            <div class="assessment-role-summary" id="assessment-role-summary"></div>
+            <details id="formula-editor">
+                <summary>Edit Formula Weights</summary>
+                <div id="formula-editor-content"></div>
+            </details>
+            <div id="assessment-categories"></div>
         </div>
 
-        <!-- SKILLS VIEW -->
-        <div id="view-skills" style="display:none">
+        <!-- KEYWORDS VIEW -->
+        <div id="view-keywords" style="display:none">
             <div class="skills-page-header">
-                <h2>Select your Skills</h2>
-                <p class="skills-subtitle">Toggle the keywords that are relevant to your job search. Your feed will show which of these appear in each job description, and you can filter by them.</p>
+                <h2>Keyword Filter</h2>
+                <p class="skills-subtitle">Toggle keywords relevant to your search. Jobs matching all selected keywords will be highlighted. Select keywords here to pre-populate the feed filter.</p>
             </div>
             <div id="skills-grid" class="skills-grid"></div>
             <div class="skills-page-actions">
@@ -112,9 +121,14 @@
                         </label>
                     </div>
                     <div class="grid">
+                        <label>Min rated skill score
+                            <div class="min-skills-row">
+                                <input type="number" id="f-min-skills" min="1.0" max="5.0" step="0.1" placeholder="e.g. 3.5" style="max-width:7rem" oninput="onMinSkillsChange(this.value)">
+                                <small class="min-skills-hint" id="min-skills-hint">Only show jobs mentioning skills you rated ≥ this value</small>
+                            </div>
+                        </label>
                         <label>Retrieved From <input type="date" id="f-date-from"></label>
                         <label>Retrieved To <input type="date" id="f-date-to"></label>
-                        <label></label>
                     </div>
                     <div class="filter-actions">
                         <label>Sort
@@ -122,10 +136,8 @@
                                 <option value="date_desc">Newest first</option>
                                 <option value="date_asc">Oldest first</option>
                                 <option value="company_asc">Company A-Z</option>
+                                <option value="skills_desc">Most skills matched</option>
                                 <option value="kw_desc">Most keywords matched</option>
-                                <option value="domain_desc">Best domain match</option>
-                                <option value="must_desc">Best must-have match</option>
-                                <option value="nice_desc">Best nice-to-have match</option>
                             </select>
                         </label>
                         <button class="outline" onclick="applyFilters()">Apply</button>
@@ -146,40 +158,6 @@
                 <button class="outline small" onclick="exportCSV()">Export CSV</button>
             </div>
             <div class="kanban-board" id="kanban"></div>
-        </div>
-
-        <!-- SCORECARD VIEW -->
-        <div id="view-scorecard" style="display:none">
-            <h2>Skills Scorecard</h2>
-            <p>Your scorecard is matched against job descriptions. Only explicit skill mentions count. All processing is local.</p>
-
-            <div id="sc-current"></div>
-
-            <article>
-                <h4>Paste Scorecard</h4>
-                <p style="font-size:0.85rem;opacity:0.7">Paste a table with columns: Category, Skill, Rating (1-5). Supports tab/pipe/comma separated, or Markdown tables.</p>
-                <textarea id="sc-paste" rows="8" placeholder="Product Strategy | Product strategy | 4
-Product Strategy | Roadmap ownership | 5
-Technical Skills | SQL | 3
-..."></textarea>
-                <button onclick="importScorecard()">Import</button>
-            </article>
-
-            <article>
-                <h4>Build Scorecard</h4>
-                <div id="sc-editor">
-                    <div class="sc-row sc-header">
-                        <span>Category</span><span>Skill</span><span>Rating</span><span></span>
-                    </div>
-                    <div id="sc-rows"></div>
-                </div>
-                <button class="outline" onclick="addScorecardRow()">+ Add Row</button>
-                <button onclick="saveEditorScorecard()">Save Scorecard</button>
-            </article>
-
-            <article>
-                <button class="outline secondary" onclick="clearScorecard()">Remove Scorecard</button>
-            </article>
         </div>
     </main>
 

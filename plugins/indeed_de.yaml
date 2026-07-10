@@ -9,12 +9,13 @@ indeed_fallback_locations:
   - Valencia
 indeed_fallback_radius: 100
 indeed_queries:
+  - product
+  - analyst
   - product manager
   - product owner
   - product analyst
   - business analyst
   - Produktmanager
-  - Produktowner
   - Produktanalyst
 indeed_radius: 100
 indeed_pages: 2

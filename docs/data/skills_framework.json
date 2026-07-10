@@ -1,0 +1,357 @@
+{
+  "version": "3.0.0",
+  "dimensions": [
+    {
+      "key": "depth",
+      "label": "Depth",
+      "description": "How deeply do you understand and can apply this skill?",
+      "levels": {
+        "0": "No knowledge or experience",
+        "1": "Conceptual awareness — read or heard about it",
+        "2": "Applied with guidance or in supervised contexts",
+        "3": "Applied independently in real work without guidance",
+        "4": "Proficient — consistent quality across varied situations",
+        "5": "Expert — mentor others, deep nuanced mastery"
+      }
+    },
+    {
+      "key": "breadth",
+      "label": "Breadth",
+      "description": "How widely have you applied this skill across contexts?",
+      "levels": {
+        "0": "Never applied",
+        "1": "Used in one narrow context or project",
+        "2": "Used across 2–3 similar projects or teams",
+        "3": "Used across different domains, team sizes or industries",
+        "4": "Applied across very different industries or org types",
+        "5": "Applied at scale across diverse, complex environments"
+      }
+    },
+    {
+      "key": "recency",
+      "label": "Recency",
+      "description": "How recently have you actively used this skill?",
+      "levels": {
+        "0": "Never used or more than 5 years ago",
+        "1": "3–5 years ago",
+        "2": "1–3 years ago",
+        "3": "Within the past year",
+        "4": "Within the past 6 months",
+        "5": "Current or ongoing — used this month"
+      }
+    },
+    {
+      "key": "impact",
+      "label": "Impact",
+      "description": "What measurable outcomes have you driven with this skill?",
+      "levels": {
+        "0": "No measurable impact",
+        "1": "Minor personal or task-level impact",
+        "2": "Small team or project-level outcomes",
+        "3": "Clear team or product impact with evidence",
+        "4": "Significant business or product outcomes you can quantify",
+        "5": "High-impact outcomes at org or product scale"
+      }
+    },
+    {
+      "key": "independence",
+      "label": "Independence",
+      "description": "How autonomously do you apply this skill?",
+      "levels": {
+        "0": "Cannot apply without heavy support",
+        "1": "Requires significant guidance and supervision",
+        "2": "Requires occasional support or review",
+        "3": "Fully independent in standard situations",
+        "4": "Independent in complex or ambiguous situations",
+        "5": "Sets direction — others defer to your judgement"
+      }
+    },
+    {
+      "key": "consistency",
+      "label": "Consistency",
+      "description": "How reliably do you deliver quality with this skill?",
+      "levels": {
+        "0": "Not applicable — no track record",
+        "1": "Applied once or a handful of times",
+        "2": "Applied occasionally with variable quality",
+        "3": "Applied regularly with consistent results",
+        "4": "Reliably excellent across most situations",
+        "5": "Consistently excellent — a defining professional strength"
+      }
+    }
+  ],
+  "formula_weights": {
+    "depth": 1.0,
+    "breadth": 1.0,
+    "recency": 1.0,
+    "impact": 1.0,
+    "independence": 1.0,
+    "consistency": 1.0
+  },
+  "roles": [
+    { "key": "BA", "label": "Business Analyst" },
+    { "key": "PO", "label": "Product Owner" },
+    { "key": "PM", "label": "Product Manager" }
+  ],
+  "skills": [
+    {
+      "name": "Acceptance Criteria Definition",
+      "category": "Delivery & Requirements",
+      "description": "Clear definition of conditions for feature acceptance",
+      "roles": ["BA", "PO"],
+      "initial_scores": { "depth": 5, "breadth": 5, "recency": 5, "impact": 4, "independence": 5, "consistency": 5 }
+    },
+    {
+      "name": "API & Integration Design",
+      "category": "Technical",
+      "description": "Designing interfaces and integration patterns",
+      "roles": ["PM", "PO"],
+      "initial_scores": {}
+    },
+    {
+      "name": "Backlog Grooming",
+      "category": "Delivery & Requirements",
+      "description": "Maintaining and refining backlog items",
+      "roles": ["PO", "PM"],
+      "initial_scores": { "depth": 5, "breadth": 5, "recency": 5, "impact": 4, "independence": 5, "consistency": 5 }
+    },
+    {
+      "name": "Business Case Development",
+      "category": "Strategic",
+      "description": "Building financial and strategic justification for initiatives",
+      "roles": ["PM"],
+      "initial_scores": { "depth": 1, "breadth": 0, "recency": 0, "impact": 0, "independence": 1, "consistency": 0 }
+    },
+    {
+      "name": "Business Process Modelling",
+      "category": "Analytical",
+      "description": "Mapping workflows and business processes",
+      "roles": ["BA", "PO"],
+      "initial_scores": { "depth": 5, "breadth": 5, "recency": 4, "impact": 3, "independence": 4, "consistency": 4 }
+    },
+    {
+      "name": "Change Management",
+      "category": "Organizational & Leadership",
+      "description": "Managing organisational impact of product changes",
+      "roles": ["PM", "BA"],
+      "initial_scores": {}
+    },
+    {
+      "name": "Cross-Functional Leadership",
+      "category": "Organizational & Leadership",
+      "description": "Leading across engineering, design and business",
+      "roles": ["PM"],
+      "initial_scores": { "depth": 4, "breadth": 5, "recency": 4, "impact": 4, "independence": 5, "consistency": 4 }
+    },
+    {
+      "name": "Customer Journey Mapping",
+      "category": "UX & Discovery",
+      "description": "Visualising customer experience across touchpoints",
+      "roles": ["PM", "PO"],
+      "initial_scores": {}
+    },
+    {
+      "name": "Data Analysis & Interpretation",
+      "category": "Analytical",
+      "description": "Using data to make decisions",
+      "roles": ["PM", "BA"],
+      "initial_scores": { "depth": 5, "breadth": 5, "recency": 4, "impact": 4, "independence": 5, "consistency": 4 }
+    },
+    {
+      "name": "Decision-Making Frameworks",
+      "category": "Strategic",
+      "description": "Using structured methods for decisions",
+      "roles": ["PM"],
+      "initial_scores": { "depth": 4, "breadth": 4, "recency": 4, "impact": 4, "independence": 3, "consistency": 3 }
+    },
+    {
+      "name": "Dependency Management",
+      "category": "Delivery & Requirements",
+      "description": "Managing cross-team dependencies",
+      "roles": ["PO", "PM"],
+      "initial_scores": { "depth": 5, "breadth": 5, "recency": 5, "impact": 4, "independence": 5, "consistency": 5 }
+    },
+    {
+      "name": "Discovery Interviewing",
+      "category": "UX & Discovery",
+      "description": "Interviewing users to uncover needs",
+      "roles": ["PM", "PO"],
+      "initial_scores": {}
+    },
+    {
+      "name": "Epic & Feature Breakdown",
+      "category": "Delivery & Requirements",
+      "description": "Structuring work into manageable units",
+      "roles": ["PO", "PM"],
+      "initial_scores": { "depth": 5, "breadth": 5, "recency": 5, "impact": 4, "independence": 5, "consistency": 5 }
+    },
+    {
+      "name": "Experimentation & A/B Testing",
+      "category": "Analytical",
+      "description": "Testing hypotheses with controlled experiments",
+      "roles": ["PM"],
+      "initial_scores": {}
+    },
+    {
+      "name": "Facilitation & Workshop Design",
+      "category": "Organizational & Leadership",
+      "description": "Running structured collaborative sessions",
+      "roles": ["PM", "PO"],
+      "initial_scores": {}
+    },
+    {
+      "name": "Feature Prioritisation",
+      "category": "Strategic",
+      "description": "Choosing what to build next",
+      "roles": ["PM", "PO"],
+      "initial_scores": { "depth": 4, "breadth": 5, "recency": 4, "impact": 4, "independence": 5, "consistency": 5 }
+    },
+    {
+      "name": "Gap Analysis",
+      "category": "Analytical",
+      "description": "Identifying gaps between current and desired state",
+      "roles": ["BA", "PO"],
+      "initial_scores": { "depth": 5, "breadth": 5, "recency": 4, "impact": 4, "independence": 5, "consistency": 5 }
+    },
+    {
+      "name": "Impact Mapping",
+      "category": "Strategic",
+      "description": "Connecting outcomes to deliverables",
+      "roles": ["PM", "PO"],
+      "initial_scores": {}
+    },
+    {
+      "name": "KPI Definition & Measurement",
+      "category": "Analytical",
+      "description": "Defining and tracking product metrics",
+      "roles": ["PM"],
+      "initial_scores": {}
+    },
+    {
+      "name": "Market & Competitor Analysis",
+      "category": "Strategic",
+      "description": "Understanding market landscape",
+      "roles": ["PM"],
+      "initial_scores": { "depth": 2, "breadth": 3, "recency": 0, "impact": 0, "independence": 1, "consistency": 1 }
+    },
+    {
+      "name": "Persona Development",
+      "category": "UX & Discovery",
+      "description": "Creating user archetypes",
+      "roles": ["PM", "PO"],
+      "initial_scores": {}
+    },
+    {
+      "name": "Prioritisation Frameworks (RICE, MoSCoW, WSJF)",
+      "category": "Strategic",
+      "description": "Structured prioritisation methods",
+      "roles": ["PM", "PO"],
+      "initial_scores": { "depth": 5, "breadth": 5, "recency": 4, "impact": 4, "independence": 3, "consistency": 3 }
+    },
+    {
+      "name": "Process Optimization",
+      "category": "Analytical",
+      "description": "Improving workflows and efficiency",
+      "roles": ["BA", "PO"],
+      "initial_scores": { "depth": 5, "breadth": 5, "recency": 3, "impact": 4, "independence": 4, "consistency": 4 }
+    },
+    {
+      "name": "Product Roadmapping",
+      "category": "Strategic",
+      "description": "Planning product evolution over time",
+      "roles": ["PM"],
+      "initial_scores": { "depth": 5, "breadth": 5, "recency": 4, "impact": 4, "independence": 5, "consistency": 5 }
+    },
+    {
+      "name": "Product Strategy Formulation",
+      "category": "Strategic",
+      "description": "Defining long-term product direction",
+      "roles": ["PM"],
+      "initial_scores": { "depth": 2, "breadth": 2, "recency": 1, "impact": 4, "independence": 2, "consistency": 1 }
+    },
+    {
+      "name": "Requirements Elicitation",
+      "category": "Delivery & Requirements",
+      "description": "Gathering requirements from stakeholders",
+      "roles": ["BA", "PO"],
+      "initial_scores": {}
+    },
+    {
+      "name": "Requirements Documentation",
+      "category": "Delivery & Requirements",
+      "description": "Writing clear and structured requirements",
+      "roles": ["BA", "PO"],
+      "initial_scores": { "depth": 5, "breadth": 5, "recency": 4, "impact": 4, "independence": 5, "consistency": 5 }
+    },
+    {
+      "name": "Risk Management",
+      "category": "Organizational & Leadership",
+      "description": "Identifying and mitigating risks",
+      "roles": ["PM", "PO"],
+      "initial_scores": { "depth": 3, "breadth": 3, "recency": 1, "impact": 4, "independence": 3, "consistency": 3 }
+    },
+    {
+      "name": "SQL & Data Querying",
+      "category": "Technical",
+      "description": "Querying databases for insights",
+      "roles": ["BA", "PM"],
+      "initial_scores": {}
+    },
+    {
+      "name": "Stakeholder Management",
+      "category": "Organizational & Leadership",
+      "description": "Managing relationships and expectations",
+      "roles": ["PM", "PO"],
+      "initial_scores": { "depth": 5, "breadth": 5, "recency": 4, "impact": 4, "independence": 4, "consistency": 4 }
+    },
+    {
+      "name": "Story Writing (User Stories)",
+      "category": "Delivery & Requirements",
+      "description": "Writing user stories with acceptance criteria",
+      "roles": ["PO", "BA"],
+      "initial_scores": { "depth": 5, "breadth": 5, "recency": 4, "impact": 4, "independence": 5, "consistency": 5 }
+    },
+    {
+      "name": "System Thinking",
+      "category": "Technical",
+      "description": "Understanding systems holistically",
+      "roles": ["PM", "PO"],
+      "initial_scores": { "depth": 4, "breadth": 4, "recency": 0, "impact": 0, "independence": 0, "consistency": 0 }
+    },
+    {
+      "name": "Technical Documentation",
+      "category": "Technical",
+      "description": "Writing technical specs and architecture notes",
+      "roles": ["PO", "BA"],
+      "initial_scores": { "depth": 5, "breadth": 5, "recency": 4, "impact": 4, "independence": 5, "consistency": 5 }
+    },
+    {
+      "name": "User Flow & Wireframing",
+      "category": "UX & Discovery",
+      "description": "Visualising user interactions",
+      "roles": ["PM", "PO"],
+      "initial_scores": {}
+    },
+    {
+      "name": "Usability Testing",
+      "category": "UX & Discovery",
+      "description": "Testing product usability with users",
+      "roles": ["PM", "PO"],
+      "initial_scores": {}
+    },
+    {
+      "name": "Value Stream Mapping",
+      "category": "Analytical",
+      "description": "Mapping value creation steps",
+      "roles": ["BA", "PO"],
+      "initial_scores": {}
+    },
+    {
+      "name": "Vision & Outcome Definition",
+      "category": "Strategic",
+      "description": "Defining product vision and measurable outcomes",
+      "roles": ["PM"],
+      "initial_scores": { "depth": 1, "breadth": 1, "recency": 1, "impact": 4, "independence": 1, "consistency": 0 }
+    }
+  ]
+}
