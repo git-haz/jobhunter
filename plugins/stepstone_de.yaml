@@ -1,0 +1,16 @@
+name: StepStone DE
+platform: stepstone
+base_url: https://www.stepstone.de
+stepstone_location: deutschland
+stepstone_queries:
+  - product manager
+  - product owner
+  - product analyst
+  - business analyst
+  - produktmanager
+  - analyst
+stepstone_pages: 2
+filters:
+  keywords: []
+  exclude_keywords: []
+  location: []

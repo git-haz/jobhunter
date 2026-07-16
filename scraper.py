@@ -1197,6 +1197,87 @@ def _fetch_indeed_page(base_url, query, location, radius, start, fromage, req_he
     return jobs
 
 
+def scrape_jobs_stepstone(plugin_config, scrape_filters=None):
+    base_url = plugin_config.get("base_url", "https://www.stepstone.de").rstrip("/")
+    queries = plugin_config.get("stepstone_queries", ["product manager"])
+    location = plugin_config.get("stepstone_location", "deutschland")
+    pages = plugin_config.get("stepstone_pages", 2)
+
+    req_headers = {
+        **HEADERS,
+        "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Referer": base_url + "/",
+    }
+
+    seen_ids = set()
+    all_jobs = []
+
+    for query in queries:
+        slug = query.lower().replace(" ", "-").replace("/", "-")
+        for page in range(1, pages + 1):
+            url = f"{base_url}/jobs/{slug}/in-{location}"
+            params = {} if page == 1 else {"p": page}
+            try:
+                resp = requests.get(url, params=params, headers=req_headers, timeout=25)
+                resp.raise_for_status()
+            except Exception:
+                break
+
+            soup = BeautifulSoup(resp.text, "html.parser")
+            articles = soup.find_all("article", attrs={"data-at": "job-item"})
+            if not articles:
+                break
+
+            for art in articles:
+                title_el = art.find("a", attrs={"data-testid": "job-item-title"})
+                if not title_el:
+                    continue
+                href = title_el.get("href", "")
+                jobid_m = re.search(r"--(\d+)-inline", href)
+                if not jobid_m:
+                    continue
+                job_id = jobid_m.group(1)
+                if job_id in seen_ids:
+                    continue
+                seen_ids.add(job_id)
+
+                title = title_el.get_text(separator=" ", strip=True)
+
+                # Extract metadata: text bits after title are [company, location, work_mode?, ...]
+                desc_el = art.find(attrs={"data-at": "job-item-middle"})
+                desc_text = desc_el.get_text(separator=" ", strip=True) if desc_el else ""
+                bits = [t.strip() for t in art.stripped_strings
+                        if t.strip() and t.strip() != title and len(t.strip()) > 1]
+                company = bits[0] if len(bits) > 0 else ""
+                location_text = bits[1] if len(bits) > 1 else ""
+                wm_hint = bits[2] if len(bits) > 2 else ""
+
+                work_mode = classify_text(wm_hint + " " + title, WORK_MODE_KEYWORDS)
+                employment_type = classify_text(title, EMPLOYMENT_TYPE_KEYWORDS)
+                seniority = classify_text(title, SENIORITY_KEYWORDS)
+
+                job_url = base_url + href if href.startswith("/") else href
+                # Canonical URL without -inline suffix
+                job_url = job_url.replace("-inline.html", ".html")
+
+                all_jobs.append({
+                    "external_id": job_id,
+                    "title": title,
+                    "company": company,
+                    "location": location_text,
+                    "url": job_url,
+                    "department": "",
+                    "work_mode": work_mode,
+                    "employment_type": employment_type,
+                    "seniority": seniority,
+                    "salary_text": "",
+                    "description": desc_text,
+                })
+
+    return apply_scrape_filters(all_jobs, scrape_filters)
+
+
 def scrape_jobs_indeed(plugin_config, scrape_filters=None):
     base_url = plugin_config.get("base_url", "https://de.indeed.com").rstrip("/")
     queries = plugin_config.get("indeed_queries", ["product manager"])
@@ -1272,6 +1353,7 @@ PLATFORM_SCRAPERS = {
     "workable": scrape_jobs_workable,
     "career_aero": scrape_jobs_career_aero,
     "indeed": scrape_jobs_indeed,
+    "stepstone": scrape_jobs_stepstone,
 }
 
 
