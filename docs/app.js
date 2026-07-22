@@ -104,6 +104,16 @@ const GERMAN_LANG = /\b(german|deutsch(?:e?|kenntnisse)?)\b/i;
 const ENGLISH_LANG = /\b(english|englisch(?:e?|kenntnisse)?)\b/i;
 
 // --- SKILLS MATCH ---
+function allJobSkills(j) {
+    // Union of confirmed keyword matches, context inferences, and LLM extractions
+    const names = new Set(j._matched_skills || []);
+    for (const n of (j._inferred_skills || [])) names.add(n);
+    const ext = j._extracted_skills || {};
+    for (const n of (ext.required || [])) names.add(n);
+    for (const n of (ext.preferred || [])) names.add(n);
+    return names;
+}
+
 function recomputeSkillsMatch(threshold) {
     if (!FRAMEWORK.skills || threshold <= 0) {
         for (const j of JOBS) j._skillsMatch = 0;
@@ -116,7 +126,7 @@ function recomputeSkillsMatch(threshold) {
             .map(s => s.name)
     );
     for (const j of JOBS) {
-        j._skillsMatch = (j._matched_skills || []).filter(n => qualifyingNames.has(n)).length;
+        j._skillsMatch = [...allJobSkills(j)].filter(n => qualifyingNames.has(n)).length;
     }
 }
 
@@ -831,18 +841,40 @@ function openDetail(idx) {
     if (j._bilingual) kwHtml += `<div class="detail-bilingual"><span class="tag tag-bilingual">🌐 Requires German &amp; English</span></div>`;
 
     const minSkills = parseFloat(document.getElementById("f-min-skills")?.value || "0");
-    if ((j._matched_skills || []).length > 0) {
-        const computedScores = computeAllSkillScores();
-        const matchedSkills = FRAMEWORK.skills.filter(s => (j._matched_skills || []).includes(s.name));
-        const qualifyingMatched = minSkills > 0
-            ? matchedSkills.filter(s => (computedScores[s.name] || 0) >= minSkills)
-            : matchedSkills.filter(s => hasAnyScore(getSkillScores()[s.name]));
-        if (matchedSkills.length > 0) {
-            const label = minSkills > 0
-                ? `Skills match: ${qualifyingMatched.length} (of ${matchedSkills.length} matched, rated ≥ ${minSkills.toFixed(1)})`
-                : `Skills found: ${matchedSkills.length}`;
-            const displayList = minSkills > 0 ? qualifyingMatched : matchedSkills;
-            kwHtml += `<details class="match-section" open><summary><strong>${label}</strong></summary><div class="mb-skills">${displayList.map(s => `<span class="kw-match">${esc(s.name)} <small>${(computedScores[s.name]||0).toFixed(1)}</small></span>`).join("")}</div></details>`;
+    // --- Skill signals section ---
+    const computedScores = computeAllSkillScores();
+    const allSkills = allJobSkills(j);
+    const hasAnySkill = allSkills.size > 0;
+
+    if (hasAnySkill) {
+        const confirmed = new Set(j._matched_skills || []);
+        const inferred = new Set(j._inferred_skills || []);
+        const ext = j._extracted_skills || {};
+        const required = new Set(ext.required || []);
+        const preferred = new Set(ext.preferred || []);
+
+        const qualifyingFilter = s => minSkills <= 0 ? hasAnyScore(getSkillScores()[s.name]) : (computedScores[s.name] || 0) >= minSkills;
+        const scoreTag = name => `<small>${(computedScores[name]||0).toFixed(1)}</small>`;
+
+        const confirmedSkills = FRAMEWORK.skills.filter(s => confirmed.has(s.name) && qualifyingFilter(s));
+        const requiredSkills = FRAMEWORK.skills.filter(s => required.has(s.name) && !confirmed.has(s.name) && qualifyingFilter(s));
+        const preferredSkills = FRAMEWORK.skills.filter(s => preferred.has(s.name) && !confirmed.has(s.name) && !required.has(s.name) && qualifyingFilter(s));
+        const inferredSkills = FRAMEWORK.skills.filter(s => inferred.has(s.name) && !confirmed.has(s.name) && !required.has(s.name) && !preferred.has(s.name) && qualifyingFilter(s));
+
+        const totalCount = confirmedSkills.length + requiredSkills.length + preferredSkills.length + inferredSkills.length;
+        if (totalCount > 0) {
+            let skillsHtml = "";
+            if (confirmedSkills.length > 0)
+                skillsHtml += `<div class="mb-skill-tier"><span class="skill-tier-label confirmed">Confirmed</span>${confirmedSkills.map(s => `<span class="kw-match skill-confirmed">${esc(s.name)} ${scoreTag(s.name)}</span>`).join("")}</div>`;
+            if (requiredSkills.length > 0)
+                skillsHtml += `<div class="mb-skill-tier"><span class="skill-tier-label required">Required</span>${requiredSkills.map(s => `<span class="kw-match skill-required">${esc(s.name)} ${scoreTag(s.name)}</span>`).join("")}</div>`;
+            if (preferredSkills.length > 0)
+                skillsHtml += `<div class="mb-skill-tier"><span class="skill-tier-label preferred">Nice to have</span>${preferredSkills.map(s => `<span class="kw-match skill-preferred">${esc(s.name)} ${scoreTag(s.name)}</span>`).join("")}</div>`;
+            if (inferredSkills.length > 0)
+                skillsHtml += `<div class="mb-skill-tier"><span class="skill-tier-label inferred">Likely</span>${inferredSkills.map(s => `<span class="kw-match skill-inferred">${esc(s.name)} ${scoreTag(s.name)}</span>`).join("")}</div>`;
+
+            const thresholdNote = minSkills > 0 ? ` rated ≥ ${minSkills.toFixed(1)}` : "";
+            kwHtml += `<details class="match-section" open><summary><strong>Skills: ${totalCount} match${thresholdNote}</strong></summary><div class="mb-skills">${skillsHtml}</div></details>`;
         }
     }
 

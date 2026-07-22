@@ -614,6 +614,23 @@ def scrape_jobs_smartrecruiters(plugin_config, scrape_filters=None):
             job_url = p.get("ref", "")
             ext_id = p.get("id", "") or p.get("uuid", "")
 
+            # Fetch full description from SmartRecruiters posting detail API
+            description = ""
+            try:
+                detail_resp = requests.get(
+                    f"{base_api}/v1/companies/{company_id}/postings/{ext_id}",
+                    headers=HEADERS, timeout=15)
+                if detail_resp.status_code == 200:
+                    sections = detail_resp.json().get("jobAd", {}).get("sections", {})
+                    parts = []
+                    for sec in ("jobDescription", "qualifications", "additionalInformation"):
+                        raw = (sections.get(sec) or {}).get("text") or ""
+                        if raw:
+                            parts.append(BeautifulSoup(raw, "html.parser").get_text(separator=" ", strip=True))
+                    description = " ".join(parts)[:5000]
+            except Exception:
+                pass
+
             job = {
                 "external_id": str(ext_id),
                 "title": title,
@@ -624,7 +641,7 @@ def scrape_jobs_smartrecruiters(plugin_config, scrape_filters=None):
                 "employment_type": employment_type or classify_text(title, EMPLOYMENT_TYPE_KEYWORDS),
                 "seniority": experience or classify_text(title, SENIORITY_KEYWORDS),
                 "salary_text": "",
-                "description": "",
+                "description": description,
             }
             all_jobs.append(job)
 
@@ -668,6 +685,13 @@ def scrape_jobs_celonis(plugin_config, scrape_filters=None):
             "salary_text": "",
             "description": f"{team} - {job_function} - {seniority} - {location}",
         }
+        # Fetch full job description from Celonis careers page
+        try:
+            detail = scrape_job_detail_html(job["url"])
+            if detail.get("description"):
+                job["description"] = detail["description"]
+        except Exception:
+            pass
         jobs.append(job)
 
     return apply_scrape_filters(jobs, scrape_filters)
@@ -1017,17 +1041,25 @@ def scrape_jobs_4dayweek(plugin_config, scrape_filters=None):
                             elif not location:
                                 location = t
 
+                job_url = f"https://4dayweek.io{href}"
+                detail_desc = ""
+                try:
+                    detail = scrape_job_detail_html(job_url)
+                    detail_desc = detail.get("description", "")
+                except Exception:
+                    pass
+
                 all_jobs[href] = {
                     "external_id": href.split("/job/")[-1],
                     "title": text,
-                    "url": f"https://4dayweek.io{href}",
+                    "url": job_url,
                     "location": location or "Remote",
                     "department": "",
                     "work_mode": "remote",
                     "employment_type": "part-time",
                     "seniority": classify_text(text, SENIORITY_KEYWORDS),
                     "salary_text": "",
-                    "description": f"{text} - 4-day work week",
+                    "description": detail_desc or f"{text} - 4-day work week",
                 }
         except Exception:
             continue

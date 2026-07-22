@@ -1,0 +1,121 @@
+{
+  "_comment": "Rule-based skill inference from job title, company, domain. Rules evaluated at seed time, results stored as _inferred_skills per job.",
+  "title_rules": [
+    {
+      "pattern": "product owner",
+      "skills": ["Story Writing (User Stories)", "Backlog Grooming", "Facilitation & Workshop Design", "Acceptance Criteria Definition", "Epic & Feature Breakdown", "Feature Prioritisation", "Stakeholder Management"]
+    },
+    {
+      "pattern": "product manager",
+      "skills": ["Product Roadmapping", "Product Strategy Formulation", "Feature Prioritisation", "Stakeholder Management", "KPI Definition & Measurement", "Market & Competitor Analysis", "Vision & Outcome Definition"]
+    },
+    {
+      "pattern": "business analyst",
+      "skills": ["Requirements Elicitation", "Requirements Documentation", "Business Process Modelling", "Data Analysis & Interpretation", "Gap Analysis", "Stakeholder Management", "Story Writing (User Stories)"]
+    },
+    {
+      "pattern": "product analyst",
+      "skills": ["Data Analysis & Interpretation", "KPI Definition & Measurement", "Experimentation & A/B Testing", "Market & Competitor Analysis", "SQL & Data Querying", "Product Roadmapping"]
+    },
+    {
+      "pattern": "data analyst",
+      "skills": ["Data Analysis & Interpretation", "SQL & Data Querying", "KPI Definition & Measurement", "Requirements Documentation"]
+    },
+    {
+      "pattern": "scrum master",
+      "skills": ["Facilitation & Workshop Design", "Dependency Management", "Backlog Grooming", "Stakeholder Management", "Change Management"]
+    },
+    {
+      "pattern": "produktmanager|produktmanagerin",
+      "skills": ["Product Roadmapping", "Product Strategy Formulation", "Feature Prioritisation", "Stakeholder Management", "KPI Definition & Measurement"]
+    },
+    {
+      "pattern": "produktowner|produkt owner",
+      "skills": ["Story Writing (User Stories)", "Backlog Grooming", "Acceptance Criteria Definition", "Epic & Feature Breakdown", "Facilitation & Workshop Design"]
+    },
+    {
+      "pattern": "product lead|head of product",
+      "skills": ["Product Strategy Formulation", "Vision & Outcome Definition", "Cross-Functional Leadership", "Stakeholder Management", "Product Roadmapping", "KPI Definition & Measurement"]
+    },
+    {
+      "pattern": "chief product|cpo|vp of product|vp product",
+      "skills": ["Product Strategy Formulation", "Vision & Outcome Definition", "Cross-Functional Leadership", "Stakeholder Management", "Market & Competitor Analysis"]
+    },
+    {
+      "pattern": "product designer|ux designer|ui designer|ux/ui",
+      "skills": ["User Flow & Wireframing", "Usability Testing", "Discovery Interviewing", "Persona Development", "Customer Journey Mapping"]
+    },
+    {
+      "pattern": "product engineer|technical product",
+      "skills": ["API & Integration Design", "Technical Documentation", "System Thinking", "Requirements Documentation"]
+    },
+    {
+      "pattern": "growth|growth manager",
+      "skills": ["Experimentation & A/B Testing", "KPI Definition & Measurement", "Market & Competitor Analysis", "Data Analysis & Interpretation"]
+    }
+  ],
+  "domain_rules": [
+    {
+      "pattern": "fintech|financial|banking|insurance|bank|insurtech|lending|payment|payments|neobank",
+      "skills": ["Risk Management", "Regulatory & Compliance Awareness", "Stakeholder Management", "Data Analysis & Interpretation"]
+    },
+    {
+      "pattern": "saas|software|platform|cloud|b2b software|enterprise software",
+      "skills": ["API & Integration Design", "Product Roadmapping", "Technical Documentation"]
+    },
+    {
+      "pattern": "health|healthcare|medical|pharma|medtech|hospital|clinic",
+      "skills": ["Risk Management", "Requirements Documentation", "Stakeholder Management"]
+    },
+    {
+      "pattern": "logistics|supply chain|fleet|fulfillment|warehouse|shipping|transport",
+      "skills": ["Process Optimization", "Stakeholder Management", "Business Process Modelling"]
+    },
+    {
+      "pattern": "ecommerce|e-commerce|marketplace|retail|shop|shopping|checkout",
+      "skills": ["Experimentation & A/B Testing", "Customer Journey Mapping", "Data Analysis & Interpretation", "KPI Definition & Measurement"]
+    },
+    {
+      "pattern": "mobility|automotive|vehicle|car|fleet|bike|scooter",
+      "skills": ["Process Optimization", "Stakeholder Management", "Data Analysis & Interpretation"]
+    },
+    {
+      "pattern": "travel|tourism|hotel|hospitality|booking",
+      "skills": ["Customer Journey Mapping", "Experimentation & A/B Testing", "Data Analysis & Interpretation"]
+    },
+    {
+      "pattern": "hr|hrtech|human resources|talent|recruiting|workforce",
+      "skills": ["Stakeholder Management", "Process Optimization", "Requirements Elicitation"]
+    },
+    {
+      "pattern": "edtech|education|learning|e-learning|online learning",
+      "skills": ["Persona Development", "Customer Journey Mapping", "KPI Definition & Measurement"]
+    },
+    {
+      "pattern": "data|analytics|intelligence|insight|ml|machine learning|ai|artificial intelligence",
+      "skills": ["Data Analysis & Interpretation", "SQL & Data Querying", "KPI Definition & Measurement", "Experimentation & A/B Testing"]
+    },
+    {
+      "pattern": "consulting|beratung|professional services|advisory",
+      "skills": ["Stakeholder Management", "Requirements Elicitation", "Business Case Development", "Change Management"]
+    },
+    {
+      "pattern": "agile|scrum|kanban|lean|devops|squad",
+      "skills": ["Facilitation & Workshop Design", "Backlog Grooming", "Dependency Management"]
+    },
+    {
+      "pattern": "security|cybersecurity|compliance|regulatory|gdpr|dsgvo",
+      "skills": ["Risk Management", "Requirements Documentation", "Stakeholder Management"]
+    }
+  ],
+  "seniority_rules": [
+    {
+      "pattern": "senior|lead|principal|staff|head of",
+      "skills": ["Cross-Functional Leadership", "Vision & Outcome Definition", "Stakeholder Management"]
+    },
+    {
+      "pattern": "director|vp |vice president|c-level|cpo|cto",
+      "skills": ["Cross-Functional Leadership", "Vision & Outcome Definition", "Product Strategy Formulation", "Business Case Development"]
+    }
+  ]
+}

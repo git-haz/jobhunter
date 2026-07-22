@@ -239,3 +239,15 @@
     .skill-cards-grid { grid-template-columns: 1fr; }
     .formula-slider-row { grid-template-columns: 80px 1fr 36px; }
 }
+
+/* Skill tier labels in job detail modal */
+.mb-skill-tier { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin-bottom: 0.4rem; }
+.skill-tier-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 0.1rem 0.4rem; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }
+.skill-tier-label.confirmed { background: #e3f2fd; color: #1565c0; }
+.skill-tier-label.required   { background: #fce4ec; color: #b71c1c; }
+.skill-tier-label.preferred  { background: #f3e5f5; color: #6a1b9a; }
+.skill-tier-label.inferred   { background: #f1f8e9; color: #33691e; }
+.skill-confirmed { border-color: #90caf9 !important; }
+.skill-required  { border-color: #ef9a9a !important; }
+.skill-preferred { border-color: #ce93d8 !important; opacity: 0.85; }
+.skill-inferred  { border-color: #aed581 !important; opacity: 0.8; font-style: italic; }

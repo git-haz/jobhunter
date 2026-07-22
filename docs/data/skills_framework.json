@@ -89,33 +89,98 @@
     "consistency": 1.0
   },
   "roles": [
-    { "key": "BA", "label": "Business Analyst" },
-    { "key": "PO", "label": "Product Owner" },
-    { "key": "PM", "label": "Product Manager" }
+    {
+      "key": "BA",
+      "label": "Business Analyst"
+    },
+    {
+      "key": "PO",
+      "label": "Product Owner"
+    },
+    {
+      "key": "PM",
+      "label": "Product Manager"
+    }
   ],
   "skills": [
     {
       "name": "Acceptance Criteria Definition",
       "category": "Delivery & Requirements",
       "description": "Clear definition of conditions for feature acceptance",
-      "roles": ["BA", "PO"],
-      "keywords": [
-        "acceptance criteria", "definition of done", "dod", "gherkin",
-        "given when then", "given-when-then", "testability", "done criteria",
-        "akzeptanzkriterien", "abnahmekriterien", "fertigstellungskriterien"
+      "roles": [
+        "BA",
+        "PO"
       ],
-      "initial_scores": { "depth": 5, "breadth": 5, "recency": 5, "impact": 4, "independence": 5, "consistency": 5 }
+      "keywords": [
+        "acceptance criteria",
+        "definition of done",
+        "dod",
+        "gherkin",
+        "given when then",
+        "given-when-then",
+        "testability",
+        "done criteria",
+        "akzeptanzkriterien",
+        "abnahmekriterien",
+        "fertigstellungskriterien",
+        "acceptance test",
+        "abnahmetest",
+        "definition of ready",
+        "dor",
+        "ac definition",
+        "abnahme",
+        "testkriterien",
+        "fertigstellungsbedingung"
+      ],
+      "initial_scores": {
+        "depth": 5,
+        "breadth": 5,
+        "recency": 5,
+        "impact": 4,
+        "independence": 5,
+        "consistency": 5
+      }
     },
     {
       "name": "API & Integration Design",
       "category": "Technical",
       "description": "Designing interfaces and integration patterns",
-      "roles": ["PM", "PO"],
+      "roles": [
+        "PM",
+        "PO"
+      ],
       "keywords": [
-        "api design", "rest api", "restful", "api contract", "openapi", "swagger",
-        "api gateway", "webhook", "api versioning", "graphql", "api specification",
-        "api endpoint", "api documentation", "integration design", "microservice",
-        "schnittstellendesign", "systemintegration", "rest-api", "schnittstellen"
+        "api design",
+        "rest api",
+        "restful",
+        "api contract",
+        "openapi",
+        "swagger",
+        "api gateway",
+        "webhook",
+        "api versioning",
+        "graphql",
+        "api specification",
+        "api endpoint",
+        "api documentation",
+        "integration design",
+        "microservice",
+        "schnittstellendesign",
+        "systemintegration",
+        "rest-api",
+        "schnittstellen",
+        "api",
+        "soap",
+        "grpc",
+        "event-driven",
+        "message queue",
+        "kafka",
+        "rabbitmq",
+        "event streaming",
+        "integration",
+        "schnittstelle",
+        "rest",
+        "middleware"
       ],
       "initial_scores": {}
     },
@@ -123,56 +188,161 @@
       "name": "Backlog Grooming",
       "category": "Delivery & Requirements",
       "description": "Maintaining and refining backlog items",
-      "roles": ["PO", "PM"],
-      "keywords": [
-        "backlog grooming", "backlog refinement", "backlog management",
-        "product backlog", "refine the backlog", "sprint planning",
-        "backlog prioriti", "story refinement",
-        "backlog-pflege", "backlog pflege", "produktbacklog", "sprint-planung"
+      "roles": [
+        "PO",
+        "PM"
       ],
-      "initial_scores": { "depth": 5, "breadth": 5, "recency": 5, "impact": 4, "independence": 5, "consistency": 5 }
+      "keywords": [
+        "backlog grooming",
+        "backlog refinement",
+        "backlog management",
+        "product backlog",
+        "refine the backlog",
+        "sprint planning",
+        "backlog prioriti",
+        "story refinement",
+        "backlog-pflege",
+        "backlog pflege",
+        "produktbacklog",
+        "sprint-planung",
+        "backlog",
+        "refinement",
+        "grooming",
+        "sprint backlog",
+        "product backlog refinement",
+        "backlog-verwaltung",
+        "backlog aufbereitung"
+      ],
+      "initial_scores": {
+        "depth": 5,
+        "breadth": 5,
+        "recency": 5,
+        "impact": 4,
+        "independence": 5,
+        "consistency": 5
+      }
     },
     {
       "name": "Business Case Development",
       "category": "Strategic",
       "description": "Building financial and strategic justification for initiatives",
-      "roles": ["PM"],
-      "keywords": [
-        "business case", "roi", "return on investment", "cost benefit", "cost-benefit",
-        "financial justification", "feasibility study", "business justification",
-        "payback period", "financial model", "value realization", "npv",
-        "wirtschaftlichkeitsanalyse", "kosten-nutzen", "rentabilitätsrechnung",
-        "machbarkeitsstudie", "wirtschaftlichkeitsprüfung"
+      "roles": [
+        "PM"
       ],
-      "initial_scores": { "depth": 1, "breadth": 0, "recency": 0, "impact": 0, "independence": 1, "consistency": 0 }
+      "keywords": [
+        "business case",
+        "roi",
+        "return on investment",
+        "cost benefit",
+        "cost-benefit",
+        "financial justification",
+        "feasibility study",
+        "business justification",
+        "payback period",
+        "financial model",
+        "value realization",
+        "npv",
+        "wirtschaftlichkeitsanalyse",
+        "kosten-nutzen",
+        "rentabilitätsrechnung",
+        "machbarkeitsstudie",
+        "wirtschaftlichkeitsprüfung",
+        "value analysis",
+        "cost analysis",
+        "investment decision",
+        "investitionsrechnung",
+        "wertbeitrag",
+        "business value"
+      ],
+      "initial_scores": {
+        "depth": 1,
+        "breadth": 0,
+        "recency": 0,
+        "impact": 0,
+        "independence": 1,
+        "consistency": 0
+      }
     },
     {
       "name": "Business Process Modelling",
       "category": "Analytical",
       "description": "Mapping workflows and business processes",
-      "roles": ["BA", "PO"],
-      "keywords": [
-        "business process", "process modelling", "process modeling", "process mapping",
-        "bpmn", "workflow mapping", "process design", "flowchart", "swim lane",
-        "swimlane", "process documentation", "as-is process", "to-be process",
-        "process analysis", "process flow",
-        "geschäftsprozess", "prozessmodellierung", "prozessabbildung",
-        "ablaufdiagramm", "prozessdokumentation", "workflow-analyse", "geschäftsabläufe"
+      "roles": [
+        "BA",
+        "PO"
       ],
-      "initial_scores": { "depth": 5, "breadth": 5, "recency": 4, "impact": 3, "independence": 4, "consistency": 4 }
+      "keywords": [
+        "business process",
+        "process modelling",
+        "process modeling",
+        "process mapping",
+        "bpmn",
+        "workflow mapping",
+        "process design",
+        "flowchart",
+        "swim lane",
+        "swimlane",
+        "process documentation",
+        "as-is process",
+        "to-be process",
+        "process analysis",
+        "process flow",
+        "geschäftsprozess",
+        "prozessmodellierung",
+        "prozessabbildung",
+        "ablaufdiagramm",
+        "prozessdokumentation",
+        "workflow-analyse",
+        "geschäftsabläufe",
+        "process",
+        "workflow",
+        "prozess",
+        "ablauf",
+        "process diagram",
+        "prozessdesign",
+        "ablaufbeschreibung",
+        "prozesse optimieren"
+      ],
+      "initial_scores": {
+        "depth": 5,
+        "breadth": 5,
+        "recency": 4,
+        "impact": 3,
+        "independence": 4,
+        "consistency": 4
+      }
     },
     {
       "name": "Change Management",
       "category": "Organizational & Leadership",
       "description": "Managing organisational impact of product changes",
-      "roles": ["PM", "BA"],
+      "roles": [
+        "PM",
+        "BA"
+      ],
       "keywords": [
-        "change management", "organizational change", "change impact",
-        "stakeholder adoption", "change readiness", "transition management",
-        "change communication", "change champion", "resistance to change",
+        "change management",
+        "organizational change",
+        "change impact",
+        "stakeholder adoption",
+        "change readiness",
+        "transition management",
+        "change communication",
+        "change champion",
+        "resistance to change",
         "change process",
-        "veränderungsmanagement", "organisationsveränderung",
-        "veränderungsprozess", "transformationsmanagement"
+        "veränderungsmanagement",
+        "organisationsveränderung",
+        "veränderungsprozess",
+        "transformationsmanagement",
+        "transformation",
+        "change initiative",
+        "change program",
+        "cultural change",
+        "adoption management",
+        "wandel",
+        "transformationsprojekt",
+        "digitale transformation"
       ],
       "initial_scores": {}
     },
@@ -180,28 +350,77 @@
       "name": "Cross-Functional Leadership",
       "category": "Organizational & Leadership",
       "description": "Leading across engineering, design and business",
-      "roles": ["PM"],
-      "keywords": [
-        "cross-functional", "cross functional", "cross-team", "lead engineers",
-        "leading teams", "driving alignment", "cross-departmental", "align teams",
-        "cross-organizational", "lead cross", "collaborate across teams",
-        "team leadership", "work with engineers",
-        "funktionsübergreifend", "abteilungsübergreifend", "bereichsübergreifend",
-        "führung von teams", "teamleitung"
+      "roles": [
+        "PM"
       ],
-      "initial_scores": { "depth": 4, "breadth": 5, "recency": 4, "impact": 4, "independence": 5, "consistency": 4 }
+      "keywords": [
+        "cross-functional",
+        "cross functional",
+        "cross-team",
+        "lead engineers",
+        "leading teams",
+        "driving alignment",
+        "cross-departmental",
+        "align teams",
+        "cross-organizational",
+        "lead cross",
+        "collaborate across teams",
+        "team leadership",
+        "work with engineers",
+        "funktionsübergreifend",
+        "abteilungsübergreifend",
+        "bereichsübergreifend",
+        "führung von teams",
+        "teamleitung",
+        "work with engineering",
+        "collaborate with engineering",
+        "cross team",
+        "product trio",
+        "squad",
+        "tribe",
+        "interdisziplinar",
+        "funktionsubergreifend"
+      ],
+      "initial_scores": {
+        "depth": 4,
+        "breadth": 5,
+        "recency": 4,
+        "impact": 4,
+        "independence": 5,
+        "consistency": 4
+      }
     },
     {
       "name": "Customer Journey Mapping",
       "category": "UX & Discovery",
       "description": "Visualising customer experience across touchpoints",
-      "roles": ["PM", "PO"],
+      "roles": [
+        "PM",
+        "PO"
+      ],
       "keywords": [
-        "customer journey", "journey mapping", "touchpoint", "customer experience",
-        "cx mapping", "experience mapping", "service blueprint",
-        "end-to-end experience", "customer touchpoint", "user journey",
+        "customer journey",
+        "journey mapping",
+        "touchpoint",
+        "customer experience",
+        "cx mapping",
+        "experience mapping",
+        "service blueprint",
+        "end-to-end experience",
+        "customer touchpoint",
+        "user journey",
         "customer journey map",
-        "kundenreise", "touchpoint-analyse", "kundenerlebnis", "nutzererfahrung"
+        "kundenreise",
+        "touchpoint-analyse",
+        "kundenerlebnis",
+        "nutzererfahrung",
+        "cx",
+        "user experience",
+        "touchpoints",
+        "customer lifecycle",
+        "customer path",
+        "customer flow",
+        "ux strategy"
       ],
       "initial_scores": {}
     },
@@ -209,59 +428,173 @@
       "name": "Data Analysis & Interpretation",
       "category": "Analytical",
       "description": "Using data to make decisions",
-      "roles": ["PM", "BA"],
-      "keywords": [
-        "data analysis", "data analytics", "data-driven", "data driven",
-        "sql queries", "metrics", "dashboards", "reporting", "quantitative analysis",
-        "data insights", "business intelligence", "bi tool", "looker", "tableau",
-        "power bi", "data warehouse", "data interpretation", "statistical analysis",
-        "analyse data", "data modelling",
-        "datenanalyse", "datenauswertung", "datengetrieben", "kennzahlen",
-        "berichte erstellen", "auswertung"
+      "roles": [
+        "PM",
+        "BA"
       ],
-      "initial_scores": { "depth": 5, "breadth": 5, "recency": 4, "impact": 4, "independence": 5, "consistency": 4 }
+      "keywords": [
+        "data analysis",
+        "data analytics",
+        "data-driven",
+        "data driven",
+        "sql queries",
+        "metrics",
+        "dashboards",
+        "reporting",
+        "quantitative analysis",
+        "data insights",
+        "business intelligence",
+        "bi tool",
+        "looker",
+        "tableau",
+        "power bi",
+        "data warehouse",
+        "data interpretation",
+        "statistical analysis",
+        "analyse data",
+        "data modelling",
+        "datenanalyse",
+        "datenauswertung",
+        "datengetrieben",
+        "kennzahlen",
+        "berichte erstellen",
+        "auswertung",
+        "analyse",
+        "analysis",
+        "data",
+        "excel",
+        "google analytics",
+        "amplitude",
+        "mixpanel",
+        "segment",
+        "heap",
+        "quantitative",
+        "analytik",
+        "datenbasiert",
+        "datengetriebene entscheidungen",
+        "datadriven"
+      ],
+      "initial_scores": {
+        "depth": 5,
+        "breadth": 5,
+        "recency": 4,
+        "impact": 4,
+        "independence": 5,
+        "consistency": 4
+      }
     },
     {
       "name": "Decision-Making Frameworks",
       "category": "Strategic",
       "description": "Using structured methods for decisions",
-      "roles": ["PM"],
-      "keywords": [
-        "decision framework", "decision making", "decision-making",
-        "trade-off analysis", "cost-benefit analysis", "decision matrix",
-        "structured decision", "evidence-based decision", "data-driven decision",
-        "make trade-offs", "evaluate options",
-        "entscheidungsrahmen", "entscheidungsfindung", "kosten-nutzen-analyse",
-        "entscheidungsmatrix", "abwägung"
+      "roles": [
+        "PM"
       ],
-      "initial_scores": { "depth": 4, "breadth": 4, "recency": 4, "impact": 4, "independence": 3, "consistency": 3 }
+      "keywords": [
+        "decision framework",
+        "decision making",
+        "decision-making",
+        "trade-off analysis",
+        "cost-benefit analysis",
+        "decision matrix",
+        "structured decision",
+        "evidence-based decision",
+        "data-driven decision",
+        "make trade-offs",
+        "evaluate options",
+        "entscheidungsrahmen",
+        "entscheidungsfindung",
+        "kosten-nutzen-analyse",
+        "entscheidungsmatrix",
+        "abwägung",
+        "decision",
+        "entscheidung",
+        "trade-off",
+        "tradeoff",
+        "structured thinking",
+        "entscheidungsgrundlage",
+        "abwagung"
+      ],
+      "initial_scores": {
+        "depth": 4,
+        "breadth": 4,
+        "recency": 4,
+        "impact": 4,
+        "independence": 3,
+        "consistency": 3
+      }
     },
     {
       "name": "Dependency Management",
       "category": "Delivery & Requirements",
       "description": "Managing cross-team dependencies",
-      "roles": ["PO", "PM"],
-      "keywords": [
-        "dependency management", "manage dependencies", "cross-team dependencies",
-        "blockers", "dependency tracking", "impediment removal", "inter-team",
-        "dependency mapping", "identify blockers", "remove impediments",
-        "abhängigkeitsmanagement", "abhängigkeiten", "blocker",
-        "teamübergreifende abhängigkeiten"
+      "roles": [
+        "PO",
+        "PM"
       ],
-      "initial_scores": { "depth": 5, "breadth": 5, "recency": 5, "impact": 4, "independence": 5, "consistency": 5 }
+      "keywords": [
+        "dependency management",
+        "manage dependencies",
+        "cross-team dependencies",
+        "blockers",
+        "dependency tracking",
+        "impediment removal",
+        "inter-team",
+        "dependency mapping",
+        "identify blockers",
+        "remove impediments",
+        "abhängigkeitsmanagement",
+        "abhängigkeiten",
+        "blocker",
+        "teamübergreifende abhängigkeiten",
+        "dependencies",
+        "koordination",
+        "impediment",
+        "blocker management",
+        "koordinieren",
+        "synchronisation",
+        "team-koordination"
+      ],
+      "initial_scores": {
+        "depth": 5,
+        "breadth": 5,
+        "recency": 5,
+        "impact": 4,
+        "independence": 5,
+        "consistency": 5
+      }
     },
     {
       "name": "Discovery Interviewing",
       "category": "UX & Discovery",
       "description": "Interviewing users to uncover needs",
-      "roles": ["PM", "PO"],
+      "roles": [
+        "PM",
+        "PO"
+      ],
       "keywords": [
-        "user interview", "customer interview", "discovery research",
-        "user research", "qualitative research", "research sessions",
-        "stakeholder interview", "voice of customer", "customer insight",
-        "field research", "generative research", "continuous discovery",
-        "nutzerinterviews", "kundeninterviews", "nutzerforschung",
-        "qualitative forschung", "nutzerbefragung"
+        "user interview",
+        "customer interview",
+        "discovery research",
+        "user research",
+        "qualitative research",
+        "research sessions",
+        "stakeholder interview",
+        "voice of customer",
+        "customer insight",
+        "field research",
+        "generative research",
+        "continuous discovery",
+        "nutzerinterviews",
+        "kundeninterviews",
+        "nutzerforschung",
+        "qualitative forschung",
+        "nutzerbefragung",
+        "interviews",
+        "ux research",
+        "qualitative",
+        "research",
+        "customer discovery"
       ],
       "initial_scores": {}
     },
@@ -269,27 +602,75 @@
       "name": "Epic & Feature Breakdown",
       "category": "Delivery & Requirements",
       "description": "Structuring work into manageable units",
-      "roles": ["PO", "PM"],
-      "keywords": [
-        "epic", "feature breakdown", "story splitting", "work breakdown",
-        "feature decomposition", "product features", "feature slicing",
-        "break down requirements", "decompose", "tasks and stories",
-        "epics and features",
-        "feature-zerlegung", "arbeitspakete", "aufgabenzerlegung"
+      "roles": [
+        "PO",
+        "PM"
       ],
-      "initial_scores": { "depth": 5, "breadth": 5, "recency": 5, "impact": 4, "independence": 5, "consistency": 5 }
+      "keywords": [
+        "epic",
+        "feature breakdown",
+        "story splitting",
+        "work breakdown",
+        "feature decomposition",
+        "product features",
+        "feature slicing",
+        "break down requirements",
+        "decompose",
+        "tasks and stories",
+        "epics and features",
+        "feature-zerlegung",
+        "arbeitspakete",
+        "aufgabenzerlegung",
+        "features",
+        "epics",
+        "feature",
+        "breakdown",
+        "slicing",
+        "decomposition",
+        "work packages",
+        "feature definition"
+      ],
+      "initial_scores": {
+        "depth": 5,
+        "breadth": 5,
+        "recency": 5,
+        "impact": 4,
+        "independence": 5,
+        "consistency": 5
+      }
     },
     {
       "name": "Experimentation & A/B Testing",
       "category": "Analytical",
       "description": "Testing hypotheses with controlled experiments",
-      "roles": ["PM"],
+      "roles": [
+        "PM"
+      ],
       "keywords": [
-        "a/b test", "ab test", "a/b testing", "ab testing", "experimentation",
-        "hypothesis testing", "split test", "controlled experiment",
-        "feature flag", "multivariate test", "experiment design",
-        "statistical significance", "test and learn",
-        "a/b-test", "a/b-testing", "experimentierung", "hypothesentest"
+        "a/b test",
+        "ab test",
+        "a/b testing",
+        "ab testing",
+        "experimentation",
+        "hypothesis testing",
+        "split test",
+        "controlled experiment",
+        "feature flag",
+        "multivariate test",
+        "experiment design",
+        "statistical significance",
+        "test and learn",
+        "a/b-test",
+        "a/b-testing",
+        "experimentierung",
+        "hypothesentest",
+        "experiment",
+        "hypothesis",
+        "validated learning",
+        "validate",
+        "hypothese",
+        "experimentieren",
+        "validierung"
       ],
       "initial_scores": {}
     },
@@ -297,14 +678,39 @@
       "name": "Facilitation & Workshop Design",
       "category": "Organizational & Leadership",
       "description": "Running structured collaborative sessions",
-      "roles": ["PM", "PO"],
+      "roles": [
+        "PM",
+        "PO"
+      ],
       "keywords": [
-        "facilitation", "workshop design", "design thinking", "ideation session",
-        "retrospective", "brainstorming session", "collaborative session",
-        "workshop facilitation", "planning session", "scrum ceremonies",
-        "run workshops", "facilitate meetings",
-        "moderation", "workshop", "ideation", "moderator",
-        "design thinking", "retrospektive", "facilitation"
+        "facilitation",
+        "workshop design",
+        "design thinking",
+        "ideation session",
+        "retrospective",
+        "brainstorming session",
+        "collaborative session",
+        "workshop facilitation",
+        "planning session",
+        "scrum ceremonies",
+        "run workshops",
+        "facilitate meetings",
+        "moderation",
+        "workshop",
+        "ideation",
+        "moderator",
+        "design thinking",
+        "retrospektive",
+        "facilitation",
+        "facilitate",
+        "moderate",
+        "ceremonies",
+        "daily standup",
+        "sprint review",
+        "sprint retrospective",
+        "offsite",
+        "discovery workshop",
+        "workshops moderieren"
       ],
       "initial_scores": {}
     },
@@ -312,40 +718,108 @@
       "name": "Feature Prioritisation",
       "category": "Strategic",
       "description": "Choosing what to build next",
-      "roles": ["PM", "PO"],
-      "keywords": [
-        "feature prioriti", "backlog prioriti", "prioritization", "prioritisation",
-        "prioritize", "prioritise", "rank features", "value vs effort",
-        "impact vs effort", "what to build", "build vs buy",
-        "feature-priorisierung", "priorisierungsmethoden", "priorisieren",
-        "bewertung von features"
+      "roles": [
+        "PM",
+        "PO"
       ],
-      "initial_scores": { "depth": 4, "breadth": 5, "recency": 4, "impact": 4, "independence": 5, "consistency": 5 }
+      "keywords": [
+        "feature prioriti",
+        "backlog prioriti",
+        "prioritization",
+        "prioritisation",
+        "prioritize",
+        "prioritise",
+        "rank features",
+        "value vs effort",
+        "impact vs effort",
+        "what to build",
+        "build vs buy",
+        "feature-priorisierung",
+        "priorisierungsmethoden",
+        "priorisieren",
+        "bewertung von features",
+        "priorities",
+        "prioritat",
+        "prioritaten setzen",
+        "feature ranking",
+        "value prioritization"
+      ],
+      "initial_scores": {
+        "depth": 4,
+        "breadth": 5,
+        "recency": 4,
+        "impact": 4,
+        "independence": 5,
+        "consistency": 5
+      }
     },
     {
       "name": "Gap Analysis",
       "category": "Analytical",
       "description": "Identifying gaps between current and desired state",
-      "roles": ["BA", "PO"],
-      "keywords": [
-        "gap analysis", "current state", "future state", "as-is to-be",
-        "capability assessment", "requirements gap", "needs assessment",
-        "maturity assessment", "gap assessment", "identify gaps",
-        "gap-analyse", "ist-zustand", "soll-zustand", "lückenanalyse",
-        "bedarfsanalyse", "ist-soll-vergleich"
+      "roles": [
+        "BA",
+        "PO"
       ],
-      "initial_scores": { "depth": 5, "breadth": 5, "recency": 4, "impact": 4, "independence": 5, "consistency": 5 }
+      "keywords": [
+        "gap analysis",
+        "current state",
+        "future state",
+        "as-is to-be",
+        "capability assessment",
+        "requirements gap",
+        "needs assessment",
+        "maturity assessment",
+        "gap assessment",
+        "identify gaps",
+        "gap-analyse",
+        "ist-zustand",
+        "soll-zustand",
+        "lückenanalyse",
+        "bedarfsanalyse",
+        "ist-soll-vergleich",
+        "gap",
+        "assessment",
+        "current state analysis",
+        "baseline",
+        "soll-ist-vergleich",
+        "lucke",
+        "defizitanalyse"
+      ],
+      "initial_scores": {
+        "depth": 5,
+        "breadth": 5,
+        "recency": 4,
+        "impact": 4,
+        "independence": 5,
+        "consistency": 5
+      }
     },
     {
       "name": "Impact Mapping",
       "category": "Strategic",
       "description": "Connecting outcomes to deliverables",
-      "roles": ["PM", "PO"],
+      "roles": [
+        "PM",
+        "PO"
+      ],
       "keywords": [
-        "impact mapping", "impact map", "outcome mapping",
-        "goals to outcomes", "impact measurement", "outcome-based",
+        "impact mapping",
+        "impact map",
+        "outcome mapping",
+        "goals to outcomes",
+        "impact measurement",
+        "outcome-based",
         "impact-mapping",
-        "ergebnis-mapping", "wirkungskette"
+        "ergebnis-mapping",
+        "wirkungskette",
+        "impact",
+        "outcome",
+        "outcome thinking",
+        "wirkung",
+        "outcome-focused",
+        "impact-driven",
+        "measurable outcomes"
       ],
       "initial_scores": {}
     },
@@ -353,13 +827,33 @@
       "name": "KPI Definition & Measurement",
       "category": "Analytical",
       "description": "Defining and tracking product metrics",
-      "roles": ["PM"],
+      "roles": [
+        "PM"
+      ],
       "keywords": [
-        "kpi", "key performance indicator", "success metrics", "define metrics",
-        "measurement framework", "performance metrics", "north star metric",
-        "track metrics", "product metrics", "metric ownership",
-        "leistungsindikator", "kennzahlen definieren", "erfolgsmessung",
-        "metriken festlegen"
+        "kpi",
+        "key performance indicator",
+        "success metrics",
+        "define metrics",
+        "measurement framework",
+        "performance metrics",
+        "north star metric",
+        "track metrics",
+        "product metrics",
+        "metric ownership",
+        "leistungsindikator",
+        "kennzahlen definieren",
+        "erfolgsmessung",
+        "metriken festlegen",
+        "okr",
+        "objectives and key results",
+        "success criteria",
+        "north star",
+        "metrics",
+        "measure success",
+        "erfolgskennzahl",
+        "zielerreichung",
+        "tracking"
       ],
       "initial_scores": {}
     },
@@ -367,28 +861,77 @@
       "name": "Market & Competitor Analysis",
       "category": "Strategic",
       "description": "Understanding market landscape",
-      "roles": ["PM"],
-      "keywords": [
-        "market analysis", "competitor analysis", "competitive analysis",
-        "market research", "market intelligence", "competitive landscape",
-        "benchmarking", "market trends", "swot analysis", "market sizing",
-        "market segmentation", "industry analysis", "landscape analysis",
-        "marktanalyse", "wettbewerbsanalyse", "wettbewerber",
-        "marktforschung", "marktentwicklung", "swot-analyse", "wettbewerbsumfeld"
+      "roles": [
+        "PM"
       ],
-      "initial_scores": { "depth": 2, "breadth": 3, "recency": 0, "impact": 0, "independence": 1, "consistency": 1 }
+      "keywords": [
+        "market analysis",
+        "competitor analysis",
+        "competitive analysis",
+        "market research",
+        "market intelligence",
+        "competitive landscape",
+        "benchmarking",
+        "market trends",
+        "swot analysis",
+        "market sizing",
+        "market segmentation",
+        "industry analysis",
+        "landscape analysis",
+        "marktanalyse",
+        "wettbewerbsanalyse",
+        "wettbewerber",
+        "marktforschung",
+        "marktentwicklung",
+        "swot-analyse",
+        "wettbewerbsumfeld",
+        "competitive",
+        "competitor",
+        "markt",
+        "wettbewerb",
+        "industry trends",
+        "market landscape",
+        "market dynamics",
+        "markttrend"
+      ],
+      "initial_scores": {
+        "depth": 2,
+        "breadth": 3,
+        "recency": 0,
+        "impact": 0,
+        "independence": 1,
+        "consistency": 1
+      }
     },
     {
       "name": "Persona Development",
       "category": "UX & Discovery",
       "description": "Creating user archetypes",
-      "roles": ["PM", "PO"],
+      "roles": [
+        "PM",
+        "PO"
+      ],
       "keywords": [
-        "persona", "user persona", "buyer persona", "target audience",
-        "user archetype", "customer profile", "audience segmentation",
-        "customer segment", "user profile", "persona development",
-        "nutzer-persona", "zielgruppe", "nutzerprofil",
-        "zielgruppensegmentierung", "kundenprofil"
+        "persona",
+        "user persona",
+        "buyer persona",
+        "target audience",
+        "user archetype",
+        "customer profile",
+        "audience segmentation",
+        "customer segment",
+        "user profile",
+        "persona development",
+        "nutzer-persona",
+        "zielgruppe",
+        "nutzerprofil",
+        "zielgruppensegmentierung",
+        "kundenprofil",
+        "target users",
+        "audience",
+        "nutzerprofil erstellen",
+        "user archetypes",
+        "personas erstellen"
       ],
       "initial_scores": {}
     },
@@ -396,70 +939,198 @@
       "name": "Prioritisation Frameworks (RICE, MoSCoW, WSJF)",
       "category": "Strategic",
       "description": "Structured prioritisation methods",
-      "roles": ["PM", "PO"],
-      "keywords": [
-        "rice", "moscow", "wsjf", "cost of delay", "ice score",
-        "weighted scoring", "prioritization matrix", "value scoring",
-        "kano model", "opportunity scoring",
-        "rice-methode", "moscow-methode", "priorisierungsrahmen", "wertmatrix"
+      "roles": [
+        "PM",
+        "PO"
       ],
-      "initial_scores": { "depth": 5, "breadth": 5, "recency": 4, "impact": 4, "independence": 3, "consistency": 3 }
+      "keywords": [
+        "rice",
+        "moscow",
+        "wsjf",
+        "cost of delay",
+        "ice score",
+        "weighted scoring",
+        "prioritization matrix",
+        "value scoring",
+        "kano model",
+        "opportunity scoring",
+        "rice-methode",
+        "moscow-methode",
+        "priorisierungsrahmen",
+        "wertmatrix",
+        "kano",
+        "value vs complexity",
+        "effort vs impact",
+        "scoring model",
+        "prioritization method",
+        "priorisierungsmodell"
+      ],
+      "initial_scores": {
+        "depth": 5,
+        "breadth": 5,
+        "recency": 4,
+        "impact": 4,
+        "independence": 3,
+        "consistency": 3
+      }
     },
     {
       "name": "Process Optimization",
       "category": "Analytical",
       "description": "Improving workflows and efficiency",
-      "roles": ["BA", "PO"],
-      "keywords": [
-        "process optimization", "process optimisation", "process improvement",
-        "lean methodology", "six sigma", "continuous improvement", "kaizen",
-        "streamline processes", "bottleneck analysis", "efficiency improvement",
-        "waste reduction", "operational efficiency", "process redesign",
-        "prozessoptimierung", "prozessverbesserung", "lean",
-        "kontinuierliche verbesserung", "effizienzsteigerung",
-        "kaizen", "verschwendung reduzieren"
+      "roles": [
+        "BA",
+        "PO"
       ],
-      "initial_scores": { "depth": 5, "breadth": 5, "recency": 3, "impact": 4, "independence": 4, "consistency": 4 }
+      "keywords": [
+        "process optimization",
+        "process optimisation",
+        "process improvement",
+        "lean methodology",
+        "six sigma",
+        "continuous improvement",
+        "kaizen",
+        "streamline processes",
+        "bottleneck analysis",
+        "efficiency improvement",
+        "waste reduction",
+        "operational efficiency",
+        "process redesign",
+        "prozessoptimierung",
+        "prozessverbesserung",
+        "lean",
+        "kontinuierliche verbesserung",
+        "effizienzsteigerung",
+        "kaizen",
+        "verschwendung reduzieren",
+        "improvement",
+        "efficiency",
+        "automation",
+        "streamline",
+        "optimize",
+        "operational excellence",
+        "effizienz",
+        "verbesserung",
+        "automatisierung"
+      ],
+      "initial_scores": {
+        "depth": 5,
+        "breadth": 5,
+        "recency": 3,
+        "impact": 4,
+        "independence": 4,
+        "consistency": 4
+      }
     },
     {
       "name": "Product Roadmapping",
       "category": "Strategic",
       "description": "Planning product evolution over time",
-      "roles": ["PM"],
-      "keywords": [
-        "product roadmap", "roadmap", "roadmap planning", "strategic roadmap",
-        "product planning", "long-term planning", "now-next-later",
-        "release planning", "roadmap communication", "roadmap ownership",
-        "produktroadmap", "roadmap-planung", "produktplanung", "produkt-roadmap"
+      "roles": [
+        "PM"
       ],
-      "initial_scores": { "depth": 5, "breadth": 5, "recency": 4, "impact": 4, "independence": 5, "consistency": 5 }
+      "keywords": [
+        "product roadmap",
+        "roadmap",
+        "roadmap planning",
+        "strategic roadmap",
+        "product planning",
+        "long-term planning",
+        "now-next-later",
+        "release planning",
+        "roadmap communication",
+        "roadmap ownership",
+        "produktroadmap",
+        "roadmap-planung",
+        "produktplanung",
+        "produkt-roadmap",
+        "planning",
+        "quarterly planning",
+        "release plan",
+        "feature roadmap",
+        "roadmap erstellen",
+        "roadmap alignment"
+      ],
+      "initial_scores": {
+        "depth": 5,
+        "breadth": 5,
+        "recency": 4,
+        "impact": 4,
+        "independence": 5,
+        "consistency": 5
+      }
     },
     {
       "name": "Product Strategy Formulation",
       "category": "Strategic",
       "description": "Defining long-term product direction",
-      "roles": ["PM"],
-      "keywords": [
-        "product strategy", "product vision", "go-to-market", "gtm strategy",
-        "strategic direction", "market positioning", "product mission",
-        "product goals", "strategic product", "product-led growth",
-        "value proposition", "product positioning",
-        "produktstrategie", "produktvision", "marktpositionierung",
-        "strategische ausrichtung", "go-to-market"
+      "roles": [
+        "PM"
       ],
-      "initial_scores": { "depth": 2, "breadth": 2, "recency": 1, "impact": 4, "independence": 2, "consistency": 1 }
+      "keywords": [
+        "product strategy",
+        "product vision",
+        "go-to-market",
+        "gtm strategy",
+        "strategic direction",
+        "market positioning",
+        "product mission",
+        "product goals",
+        "strategic product",
+        "product-led growth",
+        "value proposition",
+        "product positioning",
+        "produktstrategie",
+        "produktvision",
+        "marktpositionierung",
+        "strategische ausrichtung",
+        "go-to-market",
+        "strategy",
+        "strategic",
+        "vision",
+        "business strategy",
+        "long-term vision",
+        "strategic planning",
+        "strategie"
+      ],
+      "initial_scores": {
+        "depth": 2,
+        "breadth": 2,
+        "recency": 1,
+        "impact": 4,
+        "independence": 2,
+        "consistency": 1
+      }
     },
     {
       "name": "Requirements Elicitation",
       "category": "Delivery & Requirements",
       "description": "Gathering requirements from stakeholders",
-      "roles": ["BA", "PO"],
+      "roles": [
+        "BA",
+        "PO"
+      ],
       "keywords": [
-        "requirements elicitation", "requirements gathering", "eliciting requirements",
-        "requirements workshop", "needs analysis", "requirements interview",
-        "gather requirements", "user needs", "elicit requirements",
-        "anforderungserhebung", "anforderungsaufnahme", "anforderungsworkshop",
-        "bedarfsermittlung", "anforderungsanalyse", "anforderungen erheben"
+        "requirements elicitation",
+        "requirements gathering",
+        "eliciting requirements",
+        "requirements workshop",
+        "needs analysis",
+        "requirements interview",
+        "gather requirements",
+        "user needs",
+        "elicit requirements",
+        "anforderungserhebung",
+        "anforderungsaufnahme",
+        "anforderungsworkshop",
+        "bedarfsermittlung",
+        "anforderungsanalyse",
+        "anforderungen erheben",
+        "requirements",
+        "anforderungen",
+        "anforderungen aufnehmen",
+        "stakeholder needs",
+        "bedarfsanalyse"
       ],
       "initial_scores": {}
     },
@@ -467,41 +1138,126 @@
       "name": "Requirements Documentation",
       "category": "Delivery & Requirements",
       "description": "Writing clear and structured requirements",
-      "roles": ["BA", "PO"],
-      "keywords": [
-        "requirements documentation", "functional specification", "business requirements",
-        "brd", "srs", "use case", "requirements document", "prd",
-        "product requirements document", "functional requirements",
-        "technical specification", "system specification", "write specifications",
-        "anforderungsdokumentation", "pflichtenheft", "lastenheft",
-        "anforderungsspezifikation", "fachkonzept", "fachliche anforderungen"
+      "roles": [
+        "BA",
+        "PO"
       ],
-      "initial_scores": { "depth": 5, "breadth": 5, "recency": 4, "impact": 4, "independence": 5, "consistency": 5 }
+      "keywords": [
+        "requirements documentation",
+        "functional specification",
+        "business requirements",
+        "brd",
+        "srs",
+        "use case",
+        "requirements document",
+        "prd",
+        "product requirements document",
+        "functional requirements",
+        "technical specification",
+        "system specification",
+        "write specifications",
+        "anforderungsdokumentation",
+        "pflichtenheft",
+        "lastenheft",
+        "anforderungsspezifikation",
+        "fachkonzept",
+        "fachliche anforderungen",
+        "documentation",
+        "specification",
+        "specs",
+        "document",
+        "specification writing",
+        "dokumentation",
+        "spezifikation",
+        "technische spezifikation"
+      ],
+      "initial_scores": {
+        "depth": 5,
+        "breadth": 5,
+        "recency": 4,
+        "impact": 4,
+        "independence": 5,
+        "consistency": 5
+      }
     },
     {
       "name": "Risk Management",
       "category": "Organizational & Leadership",
       "description": "Identifying and mitigating risks",
-      "roles": ["PM", "PO"],
-      "keywords": [
-        "risk management", "risk assessment", "risk mitigation", "risk register",
-        "risk identification", "contingency planning", "risk analysis",
-        "raid log", "risk matrix", "manage risks", "risk log",
-        "risikomanagement", "risikoanalyse", "risikobewertung",
-        "risikominimierung", "risikoregister", "risiken identifizieren"
+      "roles": [
+        "PM",
+        "PO"
       ],
-      "initial_scores": { "depth": 3, "breadth": 3, "recency": 1, "impact": 4, "independence": 3, "consistency": 3 }
+      "keywords": [
+        "risk management",
+        "risk assessment",
+        "risk mitigation",
+        "risk register",
+        "risk identification",
+        "contingency planning",
+        "risk analysis",
+        "raid log",
+        "risk matrix",
+        "manage risks",
+        "risk log",
+        "risikomanagement",
+        "risikoanalyse",
+        "risikobewertung",
+        "risikominimierung",
+        "risikoregister",
+        "risiken identifizieren",
+        "risk",
+        "risiko",
+        "risks",
+        "mitigation",
+        "risikoidentifikation",
+        "absicherung",
+        "risiken managen",
+        "risk-based"
+      ],
+      "initial_scores": {
+        "depth": 3,
+        "breadth": 3,
+        "recency": 1,
+        "impact": 4,
+        "independence": 3,
+        "consistency": 3
+      }
     },
     {
       "name": "SQL & Data Querying",
       "category": "Technical",
       "description": "Querying databases for insights",
-      "roles": ["BA", "PM"],
+      "roles": [
+        "BA",
+        "PM"
+      ],
       "keywords": [
-        "sql", "database query", "data querying", "postgresql", "mysql",
-        "bigquery", "snowflake", "dbt", "data pipeline", "etl", "elt",
-        "redshift", "spark", "hive", "data warehouse queries",
-        "datenbankabfrage", "datenbank", "sql-abfragen"
+        "sql",
+        "database query",
+        "data querying",
+        "postgresql",
+        "mysql",
+        "bigquery",
+        "snowflake",
+        "dbt",
+        "data pipeline",
+        "etl",
+        "elt",
+        "redshift",
+        "spark",
+        "hive",
+        "data warehouse queries",
+        "datenbankabfrage",
+        "datenbank",
+        "sql-abfragen",
+        "database",
+        "query",
+        "analytics",
+        "datenbankabfragen",
+        "sql kenntnisse",
+        "datenabfrage",
+        "bi"
       ],
       "initial_scores": {}
     },
@@ -509,69 +1265,202 @@
       "name": "Stakeholder Management",
       "category": "Organizational & Leadership",
       "description": "Managing relationships and expectations",
-      "roles": ["PM", "PO"],
-      "keywords": [
-        "stakeholder management", "stakeholder engagement", "stakeholder communication",
-        "stakeholder alignment", "manage stakeholders", "executive communication",
-        "c-suite", "senior leadership", "stakeholder expectations", "stakeholder map",
-        "manage expectations", "executive stakeholder", "present to leadership",
-        "stakeholder-management", "stakeholder", "interessengruppen",
-        "stakeholder-kommunikation", "führungskommunikation"
+      "roles": [
+        "PM",
+        "PO"
       ],
-      "initial_scores": { "depth": 5, "breadth": 5, "recency": 4, "impact": 4, "independence": 4, "consistency": 4 }
+      "keywords": [
+        "stakeholder management",
+        "stakeholder engagement",
+        "stakeholder communication",
+        "stakeholder alignment",
+        "manage stakeholders",
+        "executive communication",
+        "c-suite",
+        "senior leadership",
+        "stakeholder expectations",
+        "stakeholder map",
+        "manage expectations",
+        "executive stakeholder",
+        "present to leadership",
+        "stakeholder-management",
+        "stakeholder",
+        "interessengruppen",
+        "stakeholder-kommunikation",
+        "führungskommunikation",
+        "communication",
+        "senior management",
+        "leadership communication",
+        "management presentation",
+        "stakeholder koordination",
+        "abstimmung",
+        "zusammenarbeit",
+        "kommunikation"
+      ],
+      "initial_scores": {
+        "depth": 5,
+        "breadth": 5,
+        "recency": 4,
+        "impact": 4,
+        "independence": 4,
+        "consistency": 4
+      }
     },
     {
       "name": "Story Writing (User Stories)",
       "category": "Delivery & Requirements",
       "description": "Writing user stories with acceptance criteria",
-      "roles": ["PO", "BA"],
-      "keywords": [
-        "user stor", "story writing", "story point", "story mapping",
-        "as a user i want", "invest criteria", "epics and stories",
-        "write user stories", "refine user stories",
-        "user story", "anwendergeschichte", "user stories schreiben"
+      "roles": [
+        "PO",
+        "BA"
       ],
-      "initial_scores": { "depth": 5, "breadth": 5, "recency": 4, "impact": 4, "independence": 5, "consistency": 5 }
+      "keywords": [
+        "user stor",
+        "story writing",
+        "story point",
+        "story mapping",
+        "as a user i want",
+        "invest criteria",
+        "epics and stories",
+        "write user stories",
+        "refine user stories",
+        "user story",
+        "anwendergeschichte",
+        "user stories schreiben",
+        "user stories",
+        "stories",
+        "acceptance criteria",
+        "story",
+        "as a user",
+        "nutzerstories",
+        "anforderungen formulieren",
+        "story-writing"
+      ],
+      "initial_scores": {
+        "depth": 5,
+        "breadth": 5,
+        "recency": 4,
+        "impact": 4,
+        "independence": 5,
+        "consistency": 5
+      }
     },
     {
       "name": "System Thinking",
       "category": "Technical",
       "description": "Understanding systems holistically",
-      "roles": ["PM", "PO"],
-      "keywords": [
-        "systems thinking", "system design", "holistic thinking",
-        "system architecture", "complex systems", "end-to-end thinking",
-        "systemic thinking", "big picture", "interconnected", "system view",
-        "systemisches denken", "systemdesign", "ganzheitliches denken",
-        "systemarchitektur", "gesamtsicht"
+      "roles": [
+        "PM",
+        "PO"
       ],
-      "initial_scores": { "depth": 4, "breadth": 4, "recency": 0, "impact": 0, "independence": 0, "consistency": 0 }
+      "keywords": [
+        "systems thinking",
+        "system design",
+        "holistic thinking",
+        "system architecture",
+        "complex systems",
+        "end-to-end thinking",
+        "systemic thinking",
+        "big picture",
+        "interconnected",
+        "system view",
+        "systemisches denken",
+        "systemdesign",
+        "ganzheitliches denken",
+        "systemarchitektur",
+        "gesamtsicht",
+        "architecture",
+        "system",
+        "holistic",
+        "end-to-end",
+        "ganzheitlich",
+        "gesamtsystem",
+        "systemzusammenhange"
+      ],
+      "initial_scores": {
+        "depth": 4,
+        "breadth": 4,
+        "recency": 0,
+        "impact": 0,
+        "independence": 0,
+        "consistency": 0
+      }
     },
     {
       "name": "Technical Documentation",
       "category": "Technical",
       "description": "Writing technical specs and architecture notes",
-      "roles": ["PO", "BA"],
-      "keywords": [
-        "technical documentation", "technical writing", "api documentation",
-        "architecture document", "tech spec", "system design document",
-        "integration guide", "technical specification", "confluence",
-        "write technical", "document technical",
-        "technische dokumentation", "technisches schreiben",
-        "api-dokumentation", "architekturdokumentation"
+      "roles": [
+        "PO",
+        "BA"
       ],
-      "initial_scores": { "depth": 5, "breadth": 5, "recency": 4, "impact": 4, "independence": 5, "consistency": 5 }
+      "keywords": [
+        "technical documentation",
+        "technical writing",
+        "api documentation",
+        "architecture document",
+        "tech spec",
+        "system design document",
+        "integration guide",
+        "technical specification",
+        "confluence",
+        "write technical",
+        "document technical",
+        "technische dokumentation",
+        "technisches schreiben",
+        "api-dokumentation",
+        "architekturdokumentation",
+        "wiki",
+        "notion",
+        "dokumente",
+        "technische unterlagen",
+        "handbuch",
+        "systemdokumentation"
+      ],
+      "initial_scores": {
+        "depth": 5,
+        "breadth": 5,
+        "recency": 4,
+        "impact": 4,
+        "independence": 5,
+        "consistency": 5
+      }
     },
     {
       "name": "User Flow & Wireframing",
       "category": "UX & Discovery",
       "description": "Visualising user interactions",
-      "roles": ["PM", "PO"],
+      "roles": [
+        "PM",
+        "PO"
+      ],
       "keywords": [
-        "wireframe", "wireframing", "user flow", "mockup", "prototype",
-        "low-fidelity", "figma", "sketch", "balsamiq", "ux design",
-        "information architecture", "ui design", "prototyping", "lo-fi",
-        "benutzerfluss", "benutzeroberflächendesign", "ux-design", "prototyp"
+        "wireframe",
+        "wireframing",
+        "user flow",
+        "mockup",
+        "prototype",
+        "low-fidelity",
+        "figma",
+        "sketch",
+        "balsamiq",
+        "ux design",
+        "information architecture",
+        "ui design",
+        "prototyping",
+        "lo-fi",
+        "benutzerfluss",
+        "benutzeroberflächendesign",
+        "ux-design",
+        "prototyp",
+        "ux",
+        "ui",
+        "user interface",
+        "ui/ux",
+        "design",
+        "interaction design",
+        "ui-design",
+        "benutzeroberflachendesign"
       ],
       "initial_scores": {}
     },
@@ -579,13 +1468,31 @@
       "name": "Usability Testing",
       "category": "UX & Discovery",
       "description": "Testing product usability with users",
-      "roles": ["PM", "PO"],
+      "roles": [
+        "PM",
+        "PO"
+      ],
       "keywords": [
-        "usability testing", "user testing", "ux testing", "usability study",
-        "usability evaluation", "think aloud", "usability research",
-        "usability test", "test with users", "observe users",
-        "usability-test", "nutzertesting", "benutzerfreundlichkeit",
-        "nutzerbeobachtung", "ux-test"
+        "usability testing",
+        "user testing",
+        "ux testing",
+        "usability study",
+        "usability evaluation",
+        "think aloud",
+        "usability research",
+        "usability test",
+        "test with users",
+        "observe users",
+        "usability-test",
+        "nutzertesting",
+        "benutzerfreundlichkeit",
+        "nutzerbeobachtung",
+        "ux-test",
+        "usability",
+        "ux test",
+        "nutzertest",
+        "gebrauchstauglichkeit",
+        "user evaluation"
       ],
       "initial_scores": {}
     },
@@ -593,11 +1500,28 @@
       "name": "Value Stream Mapping",
       "category": "Analytical",
       "description": "Mapping value creation steps",
-      "roles": ["BA", "PO"],
+      "roles": [
+        "BA",
+        "PO"
+      ],
       "keywords": [
-        "value stream", "value stream mapping", "vsm", "waste reduction",
-        "value flow", "end-to-end flow", "lean value stream",
-        "wertstromanalyse", "wertstrom", "lean-analyse", "wertschöpfungskette"
+        "value stream",
+        "value stream mapping",
+        "vsm",
+        "waste reduction",
+        "value flow",
+        "end-to-end flow",
+        "lean value stream",
+        "wertstromanalyse",
+        "wertstrom",
+        "lean-analyse",
+        "wertschöpfungskette",
+        "lean analysis",
+        "flow efficiency",
+        "lead time",
+        "durchlaufzeit",
+        "lean value",
+        "prozessfluss"
       ],
       "initial_scores": {}
     },
@@ -605,16 +1529,43 @@
       "name": "Vision & Outcome Definition",
       "category": "Strategic",
       "description": "Defining product vision and measurable outcomes",
-      "roles": ["PM"],
-      "keywords": [
-        "product vision", "vision statement", "strategic vision",
-        "outcome definition", "mission statement", "north star",
-        "product goals", "value statement", "product mission",
-        "define vision", "shape vision",
-        "produktvision", "vision", "leitbild",
-        "strategische ziele", "ergebnisdefinition", "unternehmensvision"
+      "roles": [
+        "PM"
       ],
-      "initial_scores": { "depth": 1, "breadth": 1, "recency": 1, "impact": 4, "independence": 1, "consistency": 0 }
+      "keywords": [
+        "product vision",
+        "vision statement",
+        "strategic vision",
+        "outcome definition",
+        "mission statement",
+        "north star",
+        "product goals",
+        "value statement",
+        "product mission",
+        "define vision",
+        "shape vision",
+        "produktvision",
+        "vision",
+        "leitbild",
+        "strategische ziele",
+        "ergebnisdefinition",
+        "unternehmensvision",
+        "goals",
+        "mission",
+        "strategic goals",
+        "outcome",
+        "product direction",
+        "produktziele",
+        "zieldefinition"
+      ],
+      "initial_scores": {
+        "depth": 1,
+        "breadth": 1,
+        "recency": 1,
+        "impact": 4,
+        "independence": 1,
+        "consistency": 0
+      }
     }
   ]
 }
