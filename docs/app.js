@@ -1,4 +1,4 @@
-const APP_VERSION = "3.0.0";
+const APP_VERSION = "3.3.0";
 const VERSION_HISTORY = [
     {v:"3.0.0",d:"2026-07-10",c:["Full skills assessment framework — 37 skills, 6 dimensions, 0–5 button ratings","Editable scoring formula via weight sliders per dimension","Role scores for BA, PO, PM based on skill relevance","'Min rated skills' feed filter — only show jobs mentioning your high-rated skills","'Skills match' chip on job cards showing how many qualifying skills appear","Category scores with collapsible sections; mobile cards / desktop 2-column grid","Reseeded: product + analyst as separate searches"]},
     {v:"2.0.0",d:"2026-07-09",c:["Select your Skills page — toggle keywords from config, see job counts per keyword","Keyword extraction from job descriptions using keywords.json config","Matched keywords shown as chips on every job card","Keyword multiselect filter on feed (must include ALL selected keywords)","Sort by number of keywords matched","Seeding expanded: 4 role types, UK + DE + EU fallback locations, 3-day freshness filter"]},
