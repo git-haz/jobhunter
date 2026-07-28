@@ -1,0 +1,51 @@
+name: Seed Jobs
+
+on:
+  schedule:
+    - cron: '0 18 * * 1,3'   # 18:00 UTC = 20:00 CEST (Mon & Wed)
+  workflow_dispatch:          # manual trigger from GitHub UI
+
+permissions:
+  contents: write             # needed to push updated jobs.json back
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: pip-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Configure git identity
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+      - name: Run seed
+        run: python seed_data.py
+
+      - name: Commit and push updated job data
+        run: |
+          git add docs/data/jobs.json
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "seed: $(date -u '+%Y-%m-%d %H:%M UTC') — $(python -c "import json; d=json.load(open('docs/data/jobs.json')); print(str(d['total_jobs'])+' jobs')")"
+            git push
+          fi
